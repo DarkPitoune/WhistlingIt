@@ -1,0 +1,70 @@
+# Builds client/ and publishes dist/ to GitHub Pages at https://whistling.it.
+#
+# The daily path is Pages -> Supabase, so the two VITE_SUPABASE_* values below are
+# what make the deployed site a real game rather than the fixture fallback. They
+# are repo *variables*, not secrets, on purpose: every VITE_ value is baked into
+# the shipped bundle, and the anon key is a public identifier by design. The
+# service key must never appear here.
+name: Deploy client to Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "client/**"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never cancel a deploy in flight; queue behind it instead.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          # Unset until the ingest API is on Render. Empty only disables the
+          # booth's upload button; the daily is unaffected by design.
+          VITE_INGEST_URL: ${{ vars.VITE_INGEST_URL }}
+
+      # App.tsx routes on location.pathname, so /booth must survive a direct hit
+      # or a refresh. Pages serves 404.html for unknown paths with the URL intact,
+      # which is all the app needs to render the right screen.
+      - run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: client/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
