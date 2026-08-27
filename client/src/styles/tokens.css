@@ -1,0 +1,52 @@
+/* Ported verbatim from the interface design at ../../index.html.
+   Screen-printed toy: cool periwinkle ground, hard offset shadows instead of soft
+   elevation, exactly one loud colour so the play button is never in doubt. */
+
+:root {
+  --ground: #E8E9F4;
+  --ground-2: #DFE1F0;
+  --panel: #FDFDFF;
+  --ink: #15162C;
+  --ink-soft: #5A5D82;
+  --rule: #C8CBE4;
+  --rule-soft: #DDDFEE;
+  --blaze: #FF4E17;
+  --blaze-ink: #FFFFFF;
+  --indigo: #2B3AF5;
+  --on-indigo: #FFFFFF;
+  --butter: #FFC93C;
+  --butter-ink: #3A2A00;
+  --good: #0FA97C;
+  --on-good: #FFFFFF;
+  --shadow: rgba(21, 22, 44, .20);
+  --glow: rgba(255, 78, 23, .16);
+  --hatch: rgba(43, 58, 245, .18);
+
+  --font-display: "Unbounded", "Familjen Grotesk", system-ui, sans-serif;
+  --font-body: "Familjen Grotesk", "Helvetica Neue", Helvetica, sans-serif;
+  --font-mono: "Martian Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --w-display: 900;
+  --ls-display: -.05em;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #101128; --ground-2: #0A0B1D; --panel: #1A1B36;
+    --ink: #EDEEFA; --ink-soft: #9498C6; --rule: #2E3059; --rule-soft: #252745;
+    --blaze: #FF6B3D; --blaze-ink: #1A0800;
+    --indigo: #7385FF; --on-indigo: #0B0C22;
+    --butter: #FFD25E; --butter-ink: #2A1D00;
+    --good: #22C79A; --on-good: #04241B;
+    --shadow: rgba(0, 0, 0, .55); --glow: rgba(255, 107, 61, .20); --hatch: rgba(115, 133, 255, .22);
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #101128; --ground-2: #0A0B1D; --panel: #1A1B36;
+  --ink: #EDEEFA; --ink-soft: #9498C6; --rule: #2E3059; --rule-soft: #252745;
+  --blaze: #FF6B3D; --blaze-ink: #1A0800;
+  --indigo: #7385FF; --on-indigo: #0B0C22;
+  --butter: #FFD25E; --butter-ink: #2A1D00;
+  --good: #22C79A; --on-good: #04241B;
+  --shadow: rgba(0, 0, 0, .55); --glow: rgba(255, 107, 61, .20); --hatch: rgba(115, 133, 255, .22);
+}

@@ -1,0 +1,50 @@
+{
+  "id": "hedwig",
+  "date": "2026-08-27",
+  "audioUrl": "/clips/hedwig.wav",
+  "duration": 13.89,
+  "noteStarts": [
+    0,
+    0.62,
+    1.55,
+    1.86,
+    2.48,
+    3.72,
+    4.34,
+    6.2,
+    8.06,
+    8.99,
+    9.3,
+    9.92,
+    11.16,
+    11.78
+  ],
+  "noteEnds": [
+    0.62,
+    1.55,
+    1.86,
+    2.48,
+    3.72,
+    4.34,
+    6.2,
+    8.06,
+    8.99,
+    9.3,
+    9.92,
+    11.16,
+    11.78,
+    13.64
+  ],
+  "category": "Film",
+  "difficulty": "Tricky",
+  "avgSolveNote": 4,
+  "title": "Hedwig's Theme",
+  "from": "Harry Potter · John Williams",
+  "accepted": [
+    "harry potter",
+    "hedwig",
+    "hedwigs theme",
+    "poudlard",
+    "hp"
+  ]
+}

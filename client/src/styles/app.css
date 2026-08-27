@@ -1,0 +1,669 @@
+@import "./tokens.css";
+
+/* ───────────────────────── base ───────────────────────── */
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* The design page's ambient wash, kept — it is most of why the ground reads warm. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(60rem 40rem at 82% -10%, var(--glow), transparent 65%),
+    radial-gradient(50rem 34rem at 0% 42%, rgba(43, 58, 245, .09), transparent 70%);
+}
+
+h1, h2, h3, h4 { text-wrap: balance; margin: 0; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--indigo); outline-offset: 3px; border-radius: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+/* ───────────────────────── shell ─────────────────────────
+   Mobile-first: the app is the viewport. On a wide screen it sits in a
+   phone-width column rather than stretching — the layout was designed for a thumb. */
+.shell {
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+  padding: max(14px, env(safe-area-inset-top)) 0 max(18px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+}
+
+.app-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 22px 0;
+}
+
+.app-mark {
+  font-family: var(--font-display);
+  font-weight: var(--w-display);
+  font-size: 15px;
+  letter-spacing: var(--ls-display);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+.app-mark i { color: var(--blaze); font-style: normal; }
+
+.top-right { display: flex; align-items: center; gap: 9px; }
+
+.streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--butter);
+  color: var(--butter-ink);
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+.streak svg { width: 11px; height: 11px; }
+
+/* The booth is one link in the header — the design's reason for having no tab bar. */
+.top-link {
+  border: 1.5px solid var(--rule);
+  background: transparent;
+  border-radius: 999px;
+  padding: 4px 11px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+.top-link:hover { border-color: var(--ink); color: var(--ink); }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* ───────────────────────── the bar ─────────────────────────
+   One object carrying four facts: position, how much is unlocked, where the next
+   unlocks fall, and where the crowd usually solves. */
+.bar { padding-top: 13px; position: relative; }
+/* The crowd marker stacks a label on top of a tick, which needs more headroom than
+   the 13px a plain bar reserves. Only pay for it when the marker is there. */
+.bar--par { padding-top: 22px; }
+.bar.shake { animation: shake .34s cubic-bezier(.36, .07, .19, .97); }
+
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(3px); }
+  30%, 50%, 70% { transform: translateX(-6px); }
+  40%, 60% { transform: translateX(6px); }
+}
+
+.bar-track {
+  position: relative;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--ground-2);
+  border: 1.5px solid var(--ink);
+  overflow: visible;
+  cursor: pointer;
+  touch-action: none;
+}
+.bar-track.static { cursor: default; }
+
+.bar-open {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px 0 0 999px;
+  background: var(--ink);
+  transition: width .34s cubic-bezier(.2, .8, .3, 1);
+}
+.bar-heard {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px 0 0 999px;
+  background: var(--blaze);
+}
+.bar-lock {
+  position: absolute;
+  top: 0; bottom: 0; right: 0;
+  border-radius: 0 999px 999px 0;
+  overflow: hidden;
+  transition: left .34s cubic-bezier(.2, .8, .3, 1);
+  background: repeating-linear-gradient(-45deg, transparent 0 4px, var(--hatch) 4px 8px);
+}
+.bar-tick { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--panel); opacity: .85; }
+.bar-knob {
+  position: absolute;
+  top: 50%;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 3px solid var(--blaze);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+/* Label above, tick below, meeting the top of the track. Sums to the 22px of
+   headroom .bar--par reserves: 8px label + 2px gap + 12px tick. */
+.bar-par {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.bar-par span {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: .06em;
+  color: var(--blaze);
+}
+.bar-par b { width: 2px; height: 12px; background: var(--blaze); border-radius: 1px; }
+
+/* ───────────────────────── the daily ───────────────────────── */
+.daily {
+  flex: 1;
+  padding: 22px 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  justify-content: center;
+}
+
+.hero { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 6px 0 2px; }
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--indigo);
+}
+
+.big {
+  font-family: var(--font-display);
+  font-weight: var(--w-display);
+  letter-spacing: var(--ls-display);
+  font-size: 52px;
+  line-height: 1;
+  text-align: center;
+}
+.big em { font-style: normal; color: var(--ink-soft); font-size: .58em; }
+
+.count { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.count-lab {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* The count flipping over IS the wrong-answer feedback. No toast, no red banner. */
+.big.tick { animation: tickover .38s cubic-bezier(.2, .9, .3, 1); }
+@keyframes tickover {
+  0% { transform: translateY(-16px) scale(.86); opacity: 0; }
+  60% { transform: translateY(2px) scale(1.03); opacity: 1; }
+  100% { transform: none; }
+}
+
+.play {
+  width: 104px; height: 104px;
+  border-radius: 50%;
+  border: 2.5px solid var(--ink);
+  background: var(--blaze);
+  color: var(--blaze-ink);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 7px 0 var(--ink);
+  transition: transform .1s ease, box-shadow .1s ease;
+  position: relative;
+}
+.play:active { transform: translateY(6px); box-shadow: 0 1px 0 var(--ink); }
+.play:disabled { opacity: .55; cursor: progress; }
+.play svg { width: 36px; height: 36px; margin-left: 3px; }
+.play.on svg { margin-left: 0; }
+.play::after {
+  content: "";
+  position: absolute;
+  inset: -11px;
+  border-radius: 50%;
+  border: 2px solid var(--blaze);
+  opacity: 0;
+}
+/* Whistling is quiet — the screen has to carry the fact that something is playing. */
+.play.on::after { animation: ping 1.6s ease-out infinite; }
+@keyframes ping {
+  0% { opacity: .65; transform: scale(.94); }
+  100% { opacity: 0; transform: scale(1.16); }
+}
+
+.guess-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 2px solid var(--ink);
+  border-radius: 15px;
+  background: var(--panel);
+  padding: 4px 4px 4px 14px;
+  transition: box-shadow .16s ease;
+}
+.guess-field:focus-within { box-shadow: 0 0 0 3px var(--hatch); }
+.guess-field input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  font-weight: 500;
+  color: var(--ink);
+  padding: 11px 0;
+  min-width: 0;
+}
+.guess-field input::placeholder { color: var(--ink-soft); font-weight: 400; }
+.guess-field input:focus { outline: none; }
+
+.btn-go {
+  border: 0;
+  border-radius: 11px;
+  background: var(--ink);
+  color: var(--ground);
+  width: 42px; height: 42px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex: none;
+  transition: opacity .15s ease;
+}
+.btn-go svg { width: 19px; height: 19px; }
+.btn-go[disabled] { opacity: .25; cursor: not-allowed; }
+
+.under { display: flex; flex-direction: column; align-items: center; gap: 7px; min-height: 44px; }
+
+.btn-skip {
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 2px 0;
+}
+
+.flash {
+  font-size: 13px;
+  color: var(--blaze);
+  opacity: 0;
+  transition: opacity .2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.flash.on { opacity: 1; }
+
+/* ───────────────────────── the reveal ───────────────────────── */
+.reveal {
+  flex: 1;
+  padding: 22px 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  justify-content: center;
+}
+
+.res-hero {
+  border-radius: 22px;
+  padding: 24px 20px;
+  border: 2px solid var(--ink);
+  background: var(--good);
+  color: var(--on-good);
+  box-shadow: 0 7px 0 var(--ink);
+  text-align: center;
+}
+/* Never red. A miss should read as "tomorrow, then". */
+.res-hero.miss { background: var(--indigo); color: var(--on-indigo); }
+
+.res-kicker { font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; opacity: .85; }
+.res-title {
+  font-family: var(--font-display);
+  font-weight: var(--w-display);
+  letter-spacing: var(--ls-display);
+  font-size: 27px;
+  line-height: 1.05;
+  margin-top: 9px;
+}
+.res-from { font-size: 13.5px; margin-top: 7px; opacity: .92; }
+
+/* Six blocks, one per try. This gets pasted into a group chat — it has to read at 40px. */
+.tape { display: flex; gap: 5px; }
+.tape i { height: 30px; flex: 1; border-radius: 6px; background: var(--rule-soft); display: block; }
+.tape i.wrong { background: var(--blaze); }
+.tape i.skip { background: var(--butter); }
+.tape i.win { background: var(--good); }
+
+.res-line {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: .05em;
+  color: var(--ink-soft);
+}
+.res-line b { color: var(--ink); }
+
+.btn-share {
+  border: 2px solid var(--ink);
+  background: var(--butter);
+  color: var(--butter-ink);
+  border-radius: 15px;
+  padding: 15px;
+  cursor: pointer;
+  box-shadow: 0 6px 0 var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+.btn-share:active { transform: translateY(5px); box-shadow: 0 1px 0 var(--ink); }
+
+.countdown {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  text-align: center;
+  letter-spacing: .05em;
+  font-variant-numeric: tabular-nums;
+}
+.countdown b { color: var(--ink); }
+
+/* Replay the clip in full, once the round is over. */
+.btn-replay {
+  border: 1.5px solid var(--rule);
+  background: transparent;
+  border-radius: 12px;
+  padding: 11px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-replay:hover { border-color: var(--ink); color: var(--ink); }
+.btn-replay svg { width: 13px; height: 13px; }
+
+/* ───────────────────────── the booth ───────────────────────── */
+.booth { flex: 1; padding: 22px; display: flex; flex-direction: column; gap: 17px; }
+.booth-head { display: flex; align-items: baseline; justify-content: space-between; }
+.booth-head h3 {
+  font-family: var(--font-display);
+  font-weight: var(--w-display);
+  font-size: 19px;
+  letter-spacing: var(--ls-display);
+}
+
+.rec {
+  border: 2px dashed var(--rule);
+  border-radius: 22px;
+  padding: 24px;
+  text-align: center;
+  background: var(--ground-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.rec-btn {
+  width: 76px; height: 76px;
+  border-radius: 50%;
+  border: 2.5px solid var(--ink);
+  background: var(--blaze);
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 6px 0 var(--ink);
+}
+.rec-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--blaze-ink);
+  transition: width .18s ease, height .18s ease, border-radius .18s ease;
+}
+/* Recording: the dot becomes a square, the standard stop affordance. */
+.rec-btn.on::before { width: 24px; height: 24px; border-radius: 5px; }
+.rec-btn.on::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  border: 2px solid var(--blaze);
+  animation: ping 1.4s ease-out infinite;
+}
+.rec strong { font-size: 14.5px; }
+.rec small { font-size: 12.5px; color: var(--ink-soft); display: block; margin-top: 3px; }
+.rec-file {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--indigo);
+  text-underline-offset: 3px;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.rec-timer {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--blaze);
+  font-variant-numeric: tabular-nums;
+}
+
+.found {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 14px;
+  border: 1.5px solid var(--rule);
+  border-radius: 16px;
+}
+.found-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.found-top strong { font-size: 14px; }
+.badge-ok {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  background: var(--good);
+  color: var(--on-good);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.badge-ok.low { background: var(--butter); color: var(--butter-ink); }
+.found-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.found-foot small { font-size: 11.5px; color: var(--ink-soft); }
+.found-foot button {
+  border: 1.5px solid var(--rule);
+  background: transparent;
+  border-radius: 9px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.field { display: flex; flex-direction: column; gap: 7px; }
+.field label,
+.field .field-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.field input[type="text"] {
+  border: 1.5px solid var(--rule);
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  color: var(--ink);
+  width: 100%;
+}
+.field input[type="text"]:focus { outline: none; border-color: var(--ink); }
+.hint { font-size: 11.5px; color: var(--ink-soft); }
+
+.pickers { display: flex; flex-wrap: wrap; gap: 6px; }
+.pick-chip {
+  border: 1.5px solid var(--rule);
+  background: transparent;
+  border-radius: 999px;
+  padding: 6px 11px;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  transition: all .15s ease;
+}
+.pick-chip[aria-pressed="true"] {
+  background: var(--indigo);
+  border-color: var(--indigo);
+  color: var(--on-indigo);
+  font-weight: 600;
+}
+
+.alias { display: flex; flex-wrap: wrap; gap: 6px; }
+.alias span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ground-2);
+  border-radius: 999px;
+  padding: 5px 6px 5px 11px;
+  font-size: 12.5px;
+}
+.alias span button {
+  border: 0;
+  background: var(--rule);
+  color: var(--ink);
+  border-radius: 50%;
+  width: 16px; height: 16px;
+  line-height: 1;
+  font-size: 11px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.booth-submit {
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  color: var(--ground);
+  border-radius: 15px;
+  padding: 15px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  box-shadow: 0 5px 0 var(--hatch);
+}
+.booth-submit:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+
+.booth-done {
+  border: 2px solid var(--ink);
+  border-radius: 22px;
+  background: var(--good);
+  color: var(--on-good);
+  box-shadow: 0 7px 0 var(--ink);
+  padding: 24px 20px;
+  text-align: center;
+}
+
+/* ───────────────────────── loading / error ───────────────────────── */
+.centered {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 22px;
+  text-align: center;
+}
+.centered p { color: var(--ink-soft); font-size: 14.5px; max-width: 30ch; }
+
+/* Three dots that pulse while the clip loads. Silence needs a placeholder. */
+.dots { display: flex; gap: 7px; }
+.dots i {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--blaze);
+  animation: bob 1.1s ease-in-out infinite;
+}
+.dots i:nth-child(2) { animation-delay: .14s; }
+.dots i:nth-child(3) { animation-delay: .28s; }
+@keyframes bob {
+  0%, 100% { opacity: .28; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-5px); }
+}
