@@ -1,0 +1,1198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Interface design for WhistlingIt, a daily whistled blind-test game.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Ctext%20y%3D%22.9em%22%20font-size%3D%2290%22%3E%F0%9F%98%97%3C/text%3E%3C/svg%3E">
+<title>WhistlingIt</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;700&family=Azeret+Mono:wght@400;600&family=Bungee&family=Chivo+Mono:wght@400;600&family=Familjen+Grotesk:wght@400;500;600;700&family=Figtree:wght@400;500;700&family=Fraunces:wght@700;900&family=Hanken+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&family=Martian+Mono:wght@400;600&family=Unbounded:wght@700;900&display=swap">
+
+<style>
+/* ───────────────────────── tokens ───────────────────────── */
+:root{
+  --ground:#E8E9F4;
+  --ground-2:#DFE1F0;
+  --panel:#FDFDFF;
+  --ink:#15162C;
+  --ink-soft:#5A5D82;
+  --rule:#C8CBE4;
+  --rule-soft:#DDDFEE;
+  --blaze:#FF4E17;
+  --blaze-ink:#FFFFFF;
+  --indigo:#2B3AF5;
+  --on-indigo:#FFFFFF;
+  --butter:#FFC93C;
+  --butter-ink:#3A2A00;
+  --good:#0FA97C;
+  --on-good:#FFFFFF;
+  --shadow:rgba(21,22,44,.20);
+  --glow:rgba(255,78,23,.16);
+  --hatch:rgba(43,58,245,.18);
+  /* type: swapped live by the picker in The kit */
+  --font-display:"Unbounded","Familjen Grotesk",system-ui,sans-serif;
+  --font-body:"Familjen Grotesk","Helvetica Neue",Helvetica,sans-serif;
+  --font-mono:"Martian Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --w-display:900;
+  --ls-display:-.05em;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#101128; --ground-2:#0A0B1D; --panel:#1A1B36;
+    --ink:#EDEEFA; --ink-soft:#9498C6; --rule:#2E3059; --rule-soft:#252745;
+    --blaze:#FF6B3D; --blaze-ink:#1A0800;
+    --indigo:#7385FF; --on-indigo:#0B0C22;
+    --butter:#FFD25E; --butter-ink:#2A1D00;
+    --good:#22C79A; --on-good:#04241B;
+    --shadow:rgba(0,0,0,.55); --glow:rgba(255,107,61,.20); --hatch:rgba(115,133,255,.22);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#101128; --ground-2:#0A0B1D; --panel:#1A1B36;
+  --ink:#EDEEFA; --ink-soft:#9498C6; --rule:#2E3059; --rule-soft:#252745;
+  --blaze:#FF6B3D; --blaze-ink:#1A0800;
+  --indigo:#7385FF; --on-indigo:#0B0C22;
+  --butter:#FFD25E; --butter-ink:#2A1D00;
+  --good:#22C79A; --on-good:#04241B;
+  --shadow:rgba(0,0,0,.55); --glow:rgba(255,107,61,.20); --hatch:rgba(115,133,255,.22);
+}
+
+/* ───────────────────────── base ───────────────────────── */
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font-family:var(--font-body);font-size:16px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(60rem 40rem at 82% -10%, var(--glow), transparent 65%),
+    radial-gradient(50rem 34rem at 0% 42%, rgba(43,58,245,.09), transparent 70%);
+}
+.wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:0 24px 90px}
+h1,h2,h3,h4{text-wrap:balance;margin:0}
+p{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--indigo);outline-offset:3px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+}
+.eyebrow{
+  font-family:var(--font-mono);font-size:11px;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);
+}
+
+/* ───────────────────────── masthead ───────────────────────── */
+.mast{padding:60px 0 34px}
+.mast-top{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:baseline}
+.wordmark{
+  font-family:var(--font-display);font-weight:900;
+  font-size:clamp(40px,8.4vw,104px);line-height:.92;letter-spacing:var(--ls-display);margin:20px 0 0;
+}
+.wordmark i{color:var(--blaze);font-style:normal}
+.mast-lede{max-width:36ch;font-size:clamp(18px,2.2vw,24px);line-height:1.38;margin-top:18px;font-weight:500}
+.mast-lede b{color:var(--blaze);font-weight:700}
+.mast-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:44px;align-items:center}
+@media (max-width:900px){.mast-grid{grid-template-columns:minmax(0,1fr);gap:32px}}
+
+.demo{
+  border:2px solid var(--ink);border-radius:22px;background:var(--panel);
+  box-shadow:8px 8px 0 var(--ink);padding:30px 26px 26px;
+  display:flex;flex-direction:column;gap:18px;
+}
+.demo-lab{
+  font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-soft);
+}
+.demo-num{
+  font-family:var(--font-display);font-weight:var(--w-display);letter-spacing:var(--ls-display);
+  font-size:clamp(38px,6vw,62px);line-height:1;
+}
+.demo-num em{font-style:normal;color:var(--ink-soft);font-size:.62em}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.chip{
+  font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;padding:6px 11px;border-radius:999px;border:1.5px solid var(--ink);
+}
+.chip{text-decoration:none;color:inherit;display:inline-block}
+.chip-fill{background:var(--ink);color:var(--ground)}
+.chip-blaze{background:var(--blaze);border-color:var(--blaze);color:var(--blaze-ink)}
+
+/* ───────────────────────── the bar ─────────────────────────
+   One object carrying four facts: position, how much is unlocked,
+   where the next unlocks fall, and where the crowd usually solves. */
+.bar{padding-top:13px;position:relative}
+.bar.shake{animation:shake .34s cubic-bezier(.36,.07,.19,.97)}
+@keyframes shake{
+  10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(3px)}
+  30%,50%,70%{transform:translateX(-6px)} 40%,60%{transform:translateX(6px)}
+}
+.bar-track{
+  position:relative;height:14px;border-radius:999px;background:var(--ground-2);
+  border:1.5px solid var(--ink);overflow:visible;cursor:pointer;touch-action:none;
+}
+.bar-open{
+  position:absolute;inset:0 auto 0 0;border-radius:999px 0 0 999px;
+  background:var(--ink);transition:width .34s cubic-bezier(.2,.8,.3,1);
+}
+.bar-heard{
+  position:absolute;inset:0 auto 0 0;border-radius:999px 0 0 999px;background:var(--blaze);
+}
+.bar-lock{
+  position:absolute;top:0;bottom:0;right:0;border-radius:0 999px 999px 0;overflow:hidden;
+  transition:left .34s cubic-bezier(.2,.8,.3,1);
+  background:repeating-linear-gradient(-45deg,transparent 0 4px,var(--hatch) 4px 8px);
+}
+.bar-tick{position:absolute;top:0;bottom:0;width:2px;background:var(--panel);opacity:.85}
+.bar-knob{
+  position:absolute;top:50%;width:18px;height:18px;border-radius:50%;
+  background:var(--panel);border:3px solid var(--blaze);
+  transform:translate(-50%,-50%);pointer-events:none;
+}
+.bar-par{position:absolute;top:0;transform:translateX(-50%);pointer-events:none;text-align:center}
+.bar-par b{display:block;width:2px;height:9px;background:var(--blaze);margin:0 auto;border-radius:1px}
+.bar-par span{
+  font-family:var(--font-mono);font-size:8px;letter-spacing:.06em;color:var(--blaze);
+  display:block;margin-top:-13px;
+}
+
+/* ───────────────────────── sections ───────────────────────── */
+.sec{padding:64px 0 8px;border-top:2px solid var(--ink);margin-top:52px}
+.sec-title{
+  font-family:var(--font-display);font-weight:var(--w-display);letter-spacing:var(--ls-display);
+  font-size:clamp(32px,4.8vw,52px);line-height:.96;
+}
+.sec-sub{max-width:50ch;color:var(--ink-soft);font-size:17px;margin-top:11px}
+.sec-head{margin-bottom:32px}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:52px;align-items:start}
+.layout.rev{grid-template-columns:auto minmax(0,1fr)}
+@media (max-width:900px){
+  .layout,.layout.rev{grid-template-columns:minmax(0,1fr);gap:32px}
+  .phone-col{justify-self:center;order:-1}
+}
+.notes{display:flex;flex-direction:column;gap:20px}
+.note{border-left:3px solid var(--blaze);padding-left:16px}
+.note h4{
+  font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--blaze);margin-bottom:5px;
+}
+.note p{font-size:15.5px}
+.note em{color:var(--ink-soft);font-style:normal}
+.note--quiet{border-left-color:var(--rule)}
+.note--quiet h4{color:var(--ink-soft)}
+
+/* ───────────────────────── phone ───────────────────────── */
+.phone{
+  width:min(360px,100%);background:var(--ink);border-radius:46px;padding:11px;
+  box-shadow:14px 16px 0 var(--hatch), 0 30px 60px -30px var(--shadow);
+  position:sticky;top:24px;
+}
+.screen{background:var(--panel);border-radius:36px;overflow:hidden}
+.phone-label{
+  font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-soft);text-align:center;margin-top:13px;
+}
+
+/* ── the daily ── */
+.app{padding:22px 22px 26px;display:flex;flex-direction:column;gap:18px}
+.app-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.app-mark{font-family:var(--font-display);font-weight:var(--w-display);font-size:15px;letter-spacing:var(--ls-display)}
+.app-mark i{color:var(--blaze);font-style:normal}
+.streak{
+  display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);
+  font-size:11px;font-weight:600;background:var(--butter);color:var(--butter-ink);
+  padding:4px 9px;border-radius:999px;
+}
+.streak svg{width:11px;height:11px}
+
+.hero{display:flex;flex-direction:column;align-items:center;gap:16px;padding:6px 0 2px}
+.tag{
+  font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--indigo);
+}
+.big{
+  font-family:var(--font-display);font-weight:var(--w-display);letter-spacing:var(--ls-display);
+  font-size:52px;line-height:1;text-align:center;
+}
+.big em{font-style:normal;color:var(--ink-soft);font-size:.58em}
+.count{display:flex;flex-direction:column;align-items:center;gap:3px}
+.count-lab{
+  font-family:var(--font-mono);font-size:9.5px;font-weight:600;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--ink-soft);
+}
+.big.tick{animation:tickover .38s cubic-bezier(.2,.9,.3,1)}
+@keyframes tickover{
+  0%{transform:translateY(-16px) scale(.86);opacity:0}
+  60%{transform:translateY(2px) scale(1.03);opacity:1}
+  100%{transform:none}
+}
+.play{
+  width:104px;height:104px;border-radius:50%;border:2.5px solid var(--ink);
+  background:var(--blaze);color:var(--blaze-ink);cursor:pointer;display:grid;place-items:center;
+  box-shadow:0 7px 0 var(--ink);transition:transform .1s ease,box-shadow .1s ease;position:relative;
+}
+.play:active{transform:translateY(6px);box-shadow:0 1px 0 var(--ink)}
+.play svg{width:36px;height:36px;margin-left:3px}
+.play.on svg{margin-left:0}
+.play::after{content:"";position:absolute;inset:-11px;border-radius:50%;border:2px solid var(--blaze);opacity:0}
+.play.on::after{animation:ping 1.6s ease-out infinite}
+@keyframes ping{0%{opacity:.65;transform:scale(.94)}100%{opacity:0;transform:scale(1.16)}}
+
+.guess-field{
+  display:flex;align-items:center;gap:6px;border:2px solid var(--ink);border-radius:15px;
+  background:var(--panel);padding:4px 4px 4px 14px;transition:box-shadow .16s ease;
+}
+.guess-field:focus-within{box-shadow:0 0 0 3px var(--hatch)}
+.guess-field input{
+  flex:1;border:0;background:transparent;font-family:var(--font-body);
+  font-size:15.5px;font-weight:500;color:var(--ink);padding:11px 0;min-width:0;
+}
+.guess-field input::placeholder{color:var(--ink-soft);font-weight:400}
+.guess-field input:focus{outline:none}
+.btn-go{
+  border:0;border-radius:11px;background:var(--ink);color:var(--ground);
+  width:42px;height:42px;display:grid;place-items:center;cursor:pointer;flex:none;
+  transition:opacity .15s ease;
+}
+.btn-go svg{width:19px;height:19px}
+.btn-go[disabled]{opacity:.25;cursor:not-allowed}
+
+.under{display:flex;flex-direction:column;align-items:center;gap:7px;min-height:44px}
+.btn-skip{
+  border:0;background:transparent;color:var(--ink-soft);cursor:pointer;
+  font-family:var(--font-mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  text-decoration:underline;text-underline-offset:3px;padding:2px 0;
+}
+.flash{
+  font-size:13px;color:var(--blaze);opacity:0;transition:opacity .2s ease;
+  display:flex;align-items:center;gap:6px;
+}
+.flash.on{opacity:1}
+
+/* ── the reveal ── */
+.res{padding:22px 22px 26px;display:flex;flex-direction:column;gap:18px}
+.res-hero{
+  border-radius:22px;padding:24px 20px;border:2px solid var(--ink);
+  background:var(--good);color:var(--on-good);box-shadow:0 7px 0 var(--ink);text-align:center;
+}
+.res-hero.miss{background:var(--indigo);color:var(--on-indigo)}
+.res-kicker{font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.85}
+.res-title{font-family:var(--font-display);font-weight:var(--w-display);letter-spacing:var(--ls-display);font-size:27px;line-height:1.05;margin-top:9px}
+.res-from{font-size:13.5px;margin-top:7px;opacity:.92}
+.tape{display:flex;gap:5px}
+.tape i{height:30px;flex:1;border-radius:6px;background:var(--rule-soft);display:block}
+.tape i.wrong{background:var(--blaze)}
+.tape i.skip{background:var(--butter)}
+.tape i.win{background:var(--good)}
+.res-line{
+  text-align:center;font-family:var(--font-mono);font-size:11.5px;letter-spacing:.05em;
+  color:var(--ink-soft);
+}
+.res-line b{color:var(--ink)}
+.btn-share{
+  border:2px solid var(--ink);background:var(--butter);color:var(--butter-ink);
+  border-radius:15px;padding:15px;cursor:pointer;box-shadow:0 6px 0 var(--ink);
+  font-family:var(--font-mono);font-size:11.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  transition:transform .1s ease,box-shadow .1s ease;
+}
+.btn-share:active{transform:translateY(5px);box-shadow:0 1px 0 var(--ink)}
+.countdown{
+  font-family:var(--font-mono);font-size:11px;color:var(--ink-soft);text-align:center;
+  letter-spacing:.05em;font-variant-numeric:tabular-nums;
+}
+.countdown b{color:var(--ink)}
+
+/* ── the booth ── */
+.up{padding:22px;display:flex;flex-direction:column;gap:17px}
+.up-head{display:flex;align-items:baseline;justify-content:space-between}
+.up-head h3{font-family:var(--font-display);font-weight:var(--w-display);font-size:19px;letter-spacing:var(--ls-display)}
+.rec{
+  border:2px dashed var(--rule);border-radius:22px;padding:24px;text-align:center;
+  background:var(--ground-2);display:flex;flex-direction:column;align-items:center;gap:12px;
+}
+.rec-btn{
+  width:76px;height:76px;border-radius:50%;border:2.5px solid var(--ink);background:var(--blaze);
+  cursor:pointer;position:relative;box-shadow:0 6px 0 var(--ink);
+}
+.rec-btn::before{
+  content:"";position:absolute;inset:0;margin:auto;width:26px;height:26px;
+  border-radius:50%;background:var(--blaze-ink);
+}
+.rec-btn::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2px solid var(--blaze);animation:ping 2.2s ease-out infinite}
+.rec strong{font-size:14.5px}
+.rec small{font-size:12.5px;color:var(--ink-soft);display:block;margin-top:3px}
+.rec a{font-size:12.5px;font-weight:600;color:var(--indigo);text-underline-offset:3px}
+
+.found{display:flex;flex-direction:column;gap:11px;padding:14px;border:1.5px solid var(--rule);border-radius:16px}
+.found-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.found-top strong{font-size:14px}
+.badge-ok{
+  font-family:var(--font-mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;
+  background:var(--good);color:var(--on-good);padding:4px 8px;border-radius:6px;
+}
+.found-foot{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.found-foot small{font-size:11.5px;color:var(--ink-soft)}
+.found-foot button{
+  border:1.5px solid var(--rule);background:transparent;border-radius:9px;padding:6px 12px;cursor:pointer;
+  font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);
+}
+.field{display:flex;flex-direction:column;gap:7px}
+.field label{font-family:var(--font-mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-soft)}
+.field input[type=text]{
+  border:1.5px solid var(--rule);border-radius:12px;padding:11px 12px;background:transparent;
+  font-family:var(--font-body);font-size:14.5px;color:var(--ink);width:100%;
+}
+.field input[type=text]:focus{outline:none;border-color:var(--ink)}
+.field .hint{font-size:11.5px;color:var(--ink-soft)}
+.pickers{display:flex;flex-wrap:wrap;gap:6px}
+.pick-chip{
+  border:1.5px solid var(--rule);background:transparent;border-radius:999px;padding:6px 11px;
+  cursor:pointer;font-size:12.5px;color:var(--ink-soft);transition:all .15s ease;
+}
+.pick-chip[aria-pressed="true"]{background:var(--indigo);border-color:var(--indigo);color:var(--on-indigo);font-weight:600}
+.alias{display:flex;flex-wrap:wrap;gap:6px}
+.alias span{display:inline-flex;align-items:center;gap:6px;background:var(--ground-2);border-radius:999px;padding:5px 6px 5px 11px;font-size:12.5px}
+.alias span button{border:0;background:var(--rule);color:var(--ink);border-radius:50%;width:16px;height:16px;line-height:1;font-size:11px;cursor:pointer;display:grid;place-items:center;padding:0}
+.up-submit{
+  border:2px solid var(--ink);background:var(--ink);color:var(--ground);border-radius:15px;padding:15px;
+  cursor:pointer;font-family:var(--font-mono);font-size:11.5px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;box-shadow:0 5px 0 var(--hatch);
+}
+
+/* ───────────────────────── the cut ───────────────────────── */
+.cut{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-top:6px}
+.cut-col{border:2px solid var(--ink);border-radius:20px;background:var(--panel);padding:20px;box-shadow:6px 6px 0 var(--ink)}
+.cut-col h3{font-family:var(--font-display);font-weight:var(--w-display);font-size:14px;letter-spacing:-.02em;margin-bottom:14px}
+.cut-col ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;font-size:14.5px}
+.cut-col li{display:flex;gap:10px;align-items:flex-start}
+.cut-col li b{font-family:var(--font-mono);font-size:11px;flex:none;margin-top:3px}
+.gone b{color:var(--blaze)}
+.gone li span{color:var(--ink-soft)}
+.kept b{color:var(--good)}
+
+/* ───────────────────────── the kit ───────────────────────── */
+.kit{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:20px;margin-top:10px}
+.card{
+  border:2px solid var(--ink);border-radius:20px;background:var(--panel);padding:20px;
+  box-shadow:6px 6px 0 var(--ink);display:flex;flex-direction:column;gap:14px;
+}
+.card h3{font-family:var(--font-display);font-weight:var(--w-display);font-size:15px;letter-spacing:-.02em}
+.swatches{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.sw{border-radius:11px;padding:11px;border:1.5px solid var(--rule);display:flex;flex-direction:column;gap:3px;min-height:72px;justify-content:flex-end}
+.sw b{font-size:12px;font-weight:700}
+.sw code{font-family:var(--font-mono);font-size:9.5px;opacity:.8}
+.typebox{margin-top:22px}
+.typebox h3{font-family:var(--font-display);font-weight:var(--w-display);font-size:17px;letter-spacing:-.02em}
+.typebox p{font-size:14.5px;color:var(--ink-soft);max-width:60ch;margin-top:5px}
+.type-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:16px;margin-top:18px}
+.tp{
+  text-align:left;border:2px solid var(--rule);border-radius:18px;background:var(--panel);
+  padding:18px;cursor:pointer;display:flex;flex-direction:column;gap:9px;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+.tp:hover{border-color:var(--ink)}
+.tp[aria-pressed="true"]{border-color:var(--ink);box-shadow:5px 5px 0 var(--ink)}
+.tp-name{
+  font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-soft);display:flex;gap:7px;align-items:center;
+}
+.tp-name em{
+  font-style:normal;background:var(--blaze);color:var(--blaze-ink);
+  padding:2px 6px;border-radius:5px;font-size:8.5px;letter-spacing:.1em;
+}
+.tp-num{font-size:40px;line-height:1.05}
+.tp-num em{font-style:normal;color:var(--ink-soft);font-size:.56em}
+.tp-body{font-size:17px}
+.tp-mono{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+.tp-desc{font-size:13px;color:var(--ink-soft);border-top:1px dashed var(--rule);padding-top:9px}
+.motion-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px}
+.motion-list li{display:flex;gap:11px;font-size:14px;align-items:flex-start}
+.motion-list .dur{
+  font-family:var(--font-mono);font-size:10px;color:var(--blaze);flex:none;
+  border:1.5px solid var(--blaze);border-radius:5px;padding:2px 5px;margin-top:2px;
+}
+.decisions{display:flex;flex-direction:column;margin-top:14px;border-top:1px solid var(--rule)}
+.dec{display:grid;grid-template-columns:180px minmax(0,1fr);gap:22px;padding:18px 0;border-bottom:1px solid var(--rule);align-items:start}
+@media (max-width:640px){.dec{grid-template-columns:minmax(0,1fr);gap:6px}}
+.dec dt{font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--blaze)}
+.dec dd{margin:0;font-size:15.5px}
+.dec dd .why{display:block;color:var(--ink-soft);font-size:14px;margin-top:4px}
+.qs{border:2px dashed var(--indigo);border-radius:20px;padding:24px;margin-top:40px;display:flex;flex-direction:column;gap:13px}
+.qs h3{font-family:var(--font-display);font-weight:var(--w-display);font-size:21px;letter-spacing:-.03em}
+.qs ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px;font-size:15.5px}
+.qs ol b{color:var(--indigo)}
+.foot{margin-top:36px;font-size:12px;color:var(--ink-soft);text-align:center;font-family:var(--font-mono);letter-spacing:.06em}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ══════════════ MASTHEAD ══════════════ -->
+  <header class="mast">
+    <div class="mast-top">
+      <span class="eyebrow">Interface design · v0.2</span>
+      <span class="eyebrow">Mobile-first PWA</span>
+    </div>
+
+    <div class="mast-grid">
+      <div>
+        <h1 class="wordmark">Whistling<i>It</i></h1>
+        <p class="mast-lede">One whistled tune a day. You get <b>three notes</b>. Every miss buys one more, until the whole thing plays and the day is done.</p>
+        <div class="chips">
+          <span class="chip chip-fill">2 screens</span>
+          <span class="chip">7 elements</span>
+          <a class="chip" href="#type">4 type options ↓</a>
+          <span class="chip chip-blaze">Playable below ↓</span>
+        </div>
+      </div>
+
+      <div class="demo">
+        <span class="demo-lab">The whole interface</span>
+        <div class="count" style="align-items:flex-start">
+          <div class="demo-num" id="demoNum">3<em>/14</em></div>
+          <span class="count-lab">notes unlocked</span>
+        </div>
+        <div class="bar" id="demoBar"></div>
+        <span class="demo-lab" id="demoCap">a miss buys the next note</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════════ THE DAILY ══════════════ -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="eyebrow">Screen one</span>
+      <h2 class="sec-title">The daily</h2>
+      <p class="sec-sub">Seven things on screen, no scrolling, one thumb. The count and the play button are the only elements above the fold worth looking at.</p>
+    </div>
+
+    <div class="layout">
+      <div class="notes">
+        <div class="note">
+          <h4>The bar is four things at once</h4>
+          <p>Position, how much is unlocked, where the next notes fall, and where the crowd usually solves. That's why the ladder, the tries counter and the guess history could all go — they were saying the same thing four times.</p>
+        </div>
+        <div class="note">
+          <h4>The count is the feedback</h4>
+          <p>Get it wrong and <em>3 notes</em> flips to <em>4 notes</em> while the bar grows underneath. No error toast, no red banner. The number moving <em>is</em> the "no".</p>
+        </div>
+        <div class="note">
+          <h4>The crowd is a tick, not a sentence</h4>
+          <p>A small blaze mark on the bar shows where most people solve it. Like par on a scorecard — you read it in passing and it costs nothing.</p>
+        </div>
+        <div class="note">
+          <h4>Category and difficulty, one line</h4>
+          <p><em>Film · Tricky.</em> Enough to frame the guess, not enough to narrow it. Everything else waits for the reveal.</p>
+        </div>
+        <div class="note note--quiet">
+          <h4>Try it</h4>
+          <p>Live, with real synthesised whistling. Play, guess, or skip your way to the end.</p>
+        </div>
+      </div>
+
+      <div class="phone-col">
+        <div class="phone"><div class="screen" id="playScreen"></div></div>
+        <p class="phone-label">live prototype · sound on</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ THE REVEAL ══════════════ -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="eyebrow">Screen one, after the round</span>
+      <h2 class="sec-title">The reveal</h2>
+      <p class="sec-sub">Five things. The answer, your tape, one line of comparison, share, and a countdown to tomorrow.</p>
+    </div>
+
+    <div class="layout rev">
+      <div class="phone-col">
+        <div class="phone"><div class="screen" id="missScreen"></div></div>
+        <p class="phone-label">the miss · played to the end</p>
+      </div>
+
+      <div class="notes">
+        <div class="note">
+          <h4>The answer is the hero</h4>
+          <p>Not your score. The title sits in the coloured block at the top, because "what <em>was</em> that?" is the question everyone actually has.</p>
+        </div>
+        <div class="note">
+          <h4>Green solved, indigo missed</h4>
+          <p>Never red. A miss should read as <em>tomorrow, then</em>.</p>
+        </div>
+        <div class="note">
+          <h4>The tape</h4>
+          <p>Six blocks, one per try. Blaze wrong, butter skip, green solved. This is the thing that gets pasted into a group chat, so it has to read at 40 px wide.</p>
+        </div>
+        <div class="note note--quiet">
+          <h4>Share text</h4>
+          <p style="font-family:var(--font-mono);font-size:12.5px;background:var(--ground-2);padding:11px;border-radius:9px;white-space:pre-line;line-height:1.7;margin-top:6px">WhistlingIt 27/08
+🟥🟥🟨🟩⬜⬜ note 6
+🔥 12</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ THE BOOTH ══════════════ -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="eyebrow">Screen two</span>
+      <h2 class="sec-title">The booth</h2>
+      <p class="sec-sub">The record button is the page. Everything else is a short tail underneath it.</p>
+    </div>
+
+    <div class="layout">
+      <div class="notes">
+        <div class="note">
+          <h4>Record first, label after</h4>
+          <p>No title field, no category, no consent box in the way. You whistle, then you say what it was. Reversing that order kills contributions.</p>
+        </div>
+        <div class="note">
+          <h4>Detection reports, it doesn't ask</h4>
+          <p><em>14 notes found.</em> Same bar as the game, showing where the six levels land. One glance to catch a bad cut, one tap to adjust. Nobody places a marker from scratch.</p>
+        </div>
+        <div class="note">
+          <h4>Accepted answers is the real field</h4>
+          <p>Guessing is free text, so this list <em>is</em> the matching logic. Asking "what else would you accept?" gets far better data than calling it aliases.</p>
+        </div>
+        <div class="note note--quiet">
+          <h4>Difficulty is not a field</h4>
+          <p>Nobody can rate their own whistling. It's computed from the first hundred plays — one footnote, no input.</p>
+        </div>
+      </div>
+
+      <div class="phone-col">
+        <div class="phone">
+          <div class="screen">
+            <div class="up">
+              <div class="up-head">
+                <h3>New whistle</h3>
+                <span class="eyebrow">Draft</span>
+              </div>
+
+              <div class="rec">
+                <button class="rec-btn" aria-label="Hold to record"></button>
+                <p><strong>Hold to whistle</strong><small>10–30 seconds is plenty</small></p>
+                <a href="#booth">Upload a file instead</a>
+              </div>
+
+              <div class="found">
+                <div class="found-top">
+                  <strong>14 notes found</strong>
+                  <span class="badge-ok">Confident</span>
+                </div>
+                <div class="bar" id="boothBar"></div>
+                <div class="found-foot">
+                  <small>Levels at 3 · 4 · 5 · 6 · 7 · all</small>
+                  <button type="button">Adjust</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="upTitle">Title</label>
+                <input type="text" id="upTitle" value="Hedwig's Theme">
+              </div>
+
+              <div class="field">
+                <label for="upBy">From</label>
+                <input type="text" id="upBy" value="Harry Potter · John Williams">
+              </div>
+
+              <div class="field">
+                <label>Category</label>
+                <div class="pickers" id="catPick">
+                  <button type="button" class="pick-chip" aria-pressed="true">Film</button>
+                  <button type="button" class="pick-chip" aria-pressed="false">Jingle</button>
+                  <button type="button" class="pick-chip" aria-pressed="false">TV</button>
+                  <button type="button" class="pick-chip" aria-pressed="false">Game</button>
+                  <button type="button" class="pick-chip" aria-pressed="false">Pop</button>
+                  <button type="button" class="pick-chip" aria-pressed="false">Classical</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="aliasIn">Accepted answers</label>
+                <div class="alias" id="aliasBox">
+                  <span>Harry Potter <button type="button" aria-label="Remove">×</button></span>
+                  <span>Hedwig's Theme <button type="button" aria-label="Remove">×</button></span>
+                  <span>Poudlard <button type="button" aria-label="Remove">×</button></span>
+                </div>
+                <input type="text" id="aliasIn" placeholder="Another spelling or language…">
+              </div>
+
+              <button class="up-submit" type="button">Send to the queue</button>
+              <p class="field hint" style="text-align:center">Difficulty is set by the first 100 plays.</p>
+            </div>
+          </div>
+        </div>
+        <p class="phone-label">screen two · the booth</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ THE CUT ══════════════ -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="eyebrow">Density pass</span>
+      <h2 class="sec-title">What came off</h2>
+      <p class="sec-sub">The daily went from fourteen elements to seven. Nothing was lost, because most of what came off was the same fact wearing a different hat.</p>
+    </div>
+
+    <div class="cut">
+      <div class="cut-col gone">
+        <h3>Removed</h3>
+        <ul>
+          <li><b>—</b><span>The pitch-contour waveform</span></li>
+          <li><b>—</b><span>Six level buttons</span></li>
+          <li><b>—</b><span>The wrong-guess history list</span></li>
+          <li><b>—</b><span>"3 tries left" counter</span></li>
+          <li><b>—</b><span>Time labels, 0:00 / 0:13</span></li>
+          <li><b>—</b><span>Back-to-start button</span></li>
+          <li><b>—</b><span>Difficulty as five dots</span></li>
+          <li><b>—</b><span>"Most whistlers crack it on note 4"</span></li>
+          <li><b>—</b><span>The solve histogram</span></li>
+          <li><b>—</b><span>Whistle ↔ original A/B toggle</span></li>
+        </ul>
+      </div>
+      <div class="cut-col kept">
+        <h3>Where it went</h3>
+        <ul>
+          <li><b>→</b><span>Nowhere. Whistling is a thin, quiet sound; the drawing was decoration.</span></li>
+          <li><b>→</b><span>Into the bar's tick marks and the big count.</span></li>
+          <li><b>→</b><span>Into the tape on the result card.</span></li>
+          <li><b>→</b><span>Implied by the count — six levels, you're on three.</span></li>
+          <li><b>→</b><span>Nowhere. It's an 11-second clip.</span></li>
+          <li><b>→</b><span>Tap the bar, or press play again at the end.</span></li>
+          <li><b>→</b><span>One word next to the category: <em>Film · Tricky</em>.</span></li>
+          <li><b>→</b><span>A single tick on the bar, where par goes.</span></li>
+          <li><b>→</b><span>One line: <em>note 5 · most got it on 4</em>.</span></li>
+          <li><b>→</b><span>Cut. Fun, but it's a second feature wearing a button.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ THE KIT ══════════════ -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="eyebrow">Foundations</span>
+      <h2 class="sec-title">The kit</h2>
+      <p class="sec-sub">Screen-printed toy: cool periwinkle ground, hard offset shadows instead of soft elevation, and exactly one loud colour so the play button is never in doubt.</p>
+    </div>
+
+    <div class="kit">
+      <div class="card">
+        <h3>Colour</h3>
+        <div class="swatches">
+          <div class="sw" style="background:var(--ground)"><b>Ground</b><code>#E8E9F4</code></div>
+          <div class="sw" style="background:var(--ink);color:var(--ground);border-color:var(--ink)"><b>Ink</b><code>#15162C</code></div>
+          <div class="sw" style="background:var(--blaze);color:var(--blaze-ink);border-color:var(--blaze)"><b>Blaze</b><code>#FF4E17</code></div>
+          <div class="sw" style="background:var(--indigo);color:var(--on-indigo);border-color:var(--indigo)"><b>Indigo</b><code>#2B3AF5</code></div>
+          <div class="sw" style="background:var(--butter);color:var(--butter-ink);border-color:var(--butter)"><b>Butter</b><code>#FFC93C</code></div>
+          <div class="sw" style="background:var(--good);color:var(--on-good);border-color:var(--good)"><b>Solved</b><code>#0FA97C</code></div>
+        </div>
+        <p style="font-size:13.5px;color:var(--ink-soft)">Blaze is spent on one thing per screen: the play button, then your marker on the bar. Indigo carries structure and everything locked. The set has a dark twin — this page is already using it if your system is dark.</p>
+      </div>
+
+      <div class="card">
+        <h3>Motion</h3>
+        <ul class="motion-list">
+          <li><span class="dur">380ms</span><span>The count flips over and the bar grows. The only animation that carries meaning.</span></li>
+          <li><span class="dur">340ms</span><span>Dragging into the locked stretch shakes the bar. No copy needed — the hatching already says why.</span></li>
+          <li><span class="dur">100ms</span><span>Every chunky button drops onto its own shadow. Physical, cheap, addictive.</span></li>
+          <li><span class="dur">1.6s</span><span>A slow ring pulses off play while audio runs. Whistling is quiet — the screen has to carry the fact that something is playing.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="typebox" id="type">
+      <h3>Type — four ways to go</h3>
+      <p>Pick one and the whole page re-skins, phones included. Judge them on the count: it's the one element carrying the personality, and it's the first thing anyone looks at.</p>
+      <div class="type-pick" id="typePick" role="group" aria-label="Type pairing"></div>
+    </div>
+
+    <dl class="decisions">
+      <div class="dec"><dt>Guessing</dt><dd><b>Free text, no autocomplete.</b><span class="why">Matched server-side against the accepted-answers list from the booth. Costs a normalisation step; buys a harder game and no spoilers leaking out of a dropdown.</span></dd></div>
+      <div class="dec"><dt>Note cuts</dt><dd><b>Auto-detected, confirmed in one glance.</b><span class="why">The booth reports what it found on the same bar the game uses, so a bad cut is obvious without anyone tapping along to a click track.</span></dd></div>
+      <div class="dec"><dt>Timeline</dt><dd><b>Full track always visible.</b><span class="why">Unlocked is solid, locked is hatched and un-scrubbable. Seeing how much tune is still hiding is what makes three notes feel tense.</span></dd></div>
+      <div class="dec"><dt>Skip cost</dt><dd><b>A skip and a wrong guess cost the same.</b><span class="why">One currency. The tape tells them apart for bragging rights; the rules don't.</span></dd></div>
+      <div class="dec"><dt>Replays</dt><dd><b>Free and unlimited.</b><span class="why">The scarce resource is notes, not listens. Charging for replays only punishes bad speakers.</span></dd></div>
+      <div class="dec"><dt>Navigation</dt><dd><b>No tab bar.</b><span class="why">Two screens don't need one. The booth is one link in the header, so the daily always opens straight into the game.</span></dd></div>
+      <div class="dec"><dt>Sound</dt><dd><b>Silence, except the whistle.</b><span class="why">No win chime, no error buzz. The app's only sound is the thing you're identifying — which also means it works in a meeting.</span></dd></div>
+    </dl>
+
+    <div class="qs">
+      <h3>Five things I'd want your call on</h3>
+      <ol>
+        <li><b>Notes are an uneven currency.</b> In the prototype, three notes is 1.86 s — but note 4 buys only 0.62 s more, while note 7 buys 1.86 s. Should a level be "the next note <em>or</em> +1.5 s, whichever is longer"?</li>
+        <li><b>Timezone.</b> One global tune rotating at UTC midnight, or local-midnight per user? The first keeps the crowd tick honest, the second is friendlier.</li>
+        <li><b>Late arrivals.</b> Open the app at 23:50 — fresh full round, or the tail of the day?</li>
+        <li><b>Accounts.</b> Streaks imply identity. Device-local streak to start, optional account later?</li>
+        <li><b>Booth access.</b> Open to everyone with a moderation queue, or invited whistlers only? It decides whether the booth needs a rejection state.</li>
+      </ol>
+    </div>
+
+    <p class="foot">WhistlingIt · whistling.it · interface design v0.2 · frontend only</p>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ══════════ the tune — Hedwig's Theme, whistled. 14 notes, ~13.6s ══════════ */
+  const BEAT = 0.62;
+  const TUNE = [
+    {f:493.88,b:1},{f:659.25,b:1.5},{f:783.99,b:.5},{f:739.99,b:1},
+    {f:659.25,b:2},{f:987.77,b:1},{f:880.00,b:3},{f:739.99,b:3},
+    {f:659.25,b:1.5},{f:783.99,b:.5},{f:739.99,b:1},{f:622.25,b:2},
+    {f:698.46,b:1},{f:493.88,b:3}
+  ];
+  const DUR = TUNE.map(n => n.b * BEAT);
+  const START = [];
+  DUR.reduce((a,d,i) => { START[i] = a; return a + d; }, 0);
+  const END = START.map((s,i) => s + DUR[i]);
+  const TOTAL = END[13];
+
+  const LEVELS = [3,4,5,6,7,14];
+  const ANSWER = {
+    title:"Hedwig's Theme",
+    from:"Harry Potter · John Williams",
+    tag:"Film · Tricky",
+    accept:["harry potter","hedwig","hedwigs theme","hedwig s theme","poudlard","hp"]
+  };
+  const AVG = 4;                                  // most people solve on note 4
+  const STREAK = 12;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const pct = t => (t / TOTAL) * 100;
+
+  const ICON = {
+    play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l14-7.5z"/></svg>',
+    pause:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5.5" y="4" width="4.4" height="16" rx="1.2"/><rect x="14.1" y="4" width="4.4" height="16" rx="1.2"/></svg>',
+    go:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 5l7 7-7 7"/></svg>',
+    flame:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3 4 6 5.5 6 10a6 6 0 0 1-12 0c0-2 1-3.4 2-4.5.2 1.4.9 2.3 1.8 2.3 1.3 0 1.6-1.2 1.2-3-.3-1.6-.6-3.4 1-4.8z"/></svg>'
+  };
+
+  /* ══════════ the bar — one component, three places ══════════ */
+  function barHTML(opts){
+    const o = opts || {};
+    const ticks = [3,4,5,6,7].map(n => `<i class="bar-tick" style="left:${pct(START[n])}%"></i>`).join("");
+    const par = o.par
+      ? `<span class="bar-par" style="left:${pct(END[AVG-1])}%"><b></b><span>avg</span></span>` : "";
+    const knob = o.knob ? '<span class="bar-knob" style="left:0%"></span>' : "";
+    return `<div class="bar-track">
+        <div class="bar-open" style="width:0%"></div>
+        <div class="bar-heard" style="width:0%"></div>
+        <div class="bar-lock" style="left:0%"></div>
+        ${ticks}
+        ${knob}
+      </div>${par}`;
+  }
+  function barPaint(root, openTo, heardTo){
+    const q = s => root.querySelector(s);
+    const o = pct(openTo), h = pct(Math.min(heardTo, openTo));
+    q(".bar-open").style.width = o + "%";
+    q(".bar-heard").style.width = h + "%";
+    q(".bar-lock").style.left = o + "%";
+    const k = q(".bar-knob");
+    if (k) k.style.left = h + "%";
+  }
+  function barShake(root){
+    root.classList.remove("shake"); void root.offsetWidth; root.classList.add("shake");
+  }
+
+  /* ══════════ whistle synth ══════════ */
+  let ctx = null, live = [], noiseBuf = null;
+  function audio(){
+    if (!ctx){
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const n = ctx.sampleRate * 2, buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0);
+      for (let i=0;i<n;i++) d[i] = Math.random()*2-1;
+      noiseBuf = buf;
+    }
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
+  function killAudio(){
+    live.forEach(n => { try { n.stop(); } catch(e){} try { n.disconnect(); } catch(e){} });
+    live = [];
+  }
+  function note(i, at, len, out, mid){
+    const c = ctx, f = TUNE[i].f, prev = i > 0 ? TUNE[i-1].f : f;
+    const osc = c.createOscillator(); osc.type = "sine";
+    if (mid || i === 0) osc.frequency.setValueAtTime(f, at);
+    else {
+      osc.frequency.setValueAtTime(prev, at);
+      osc.frequency.exponentialRampToValueAtTime(f, at + Math.min(.07, len*.4));
+    }
+    const lfo = c.createOscillator(); lfo.type = "sine"; lfo.frequency.value = 5.4;
+    const lfoAmt = c.createGain(); lfoAmt.gain.value = f * .011;
+    lfo.connect(lfoAmt).connect(osc.frequency);
+
+    const atk = Math.min(.04, len*.25), rel = Math.min(.09, len*.35);
+    const g = c.createGain();
+    g.gain.setValueAtTime(.0001, at);
+    g.gain.exponentialRampToValueAtTime(.20, at + atk);
+    g.gain.setValueAtTime(.20, at + len - rel);
+    g.gain.exponentialRampToValueAtTime(.0001, at + len);
+    osc.connect(g).connect(out);
+
+    const src = c.createBufferSource(); src.buffer = noiseBuf;
+    const hp = c.createBiquadFilter(); hp.type = "bandpass"; hp.frequency.value = f*1.9; hp.Q.value = 1.4;
+    const ng = c.createGain();
+    ng.gain.setValueAtTime(.0001, at);
+    ng.gain.exponentialRampToValueAtTime(.018, at + .02);
+    ng.gain.exponentialRampToValueAtTime(.0001, at + Math.min(.22, len));
+    src.connect(hp).connect(ng).connect(out);
+
+    osc.start(at); osc.stop(at + len + .05);
+    lfo.start(at); lfo.stop(at + len + .05);
+    src.start(at); src.stop(at + len + .05);
+    live.push(osc, lfo, src);
+  }
+
+  /* ══════════ the daily ══════════ */
+  const state = { lvl:0, tape:[], done:null, playing:false, pos:0, drag:false, refocus:false, bump:false };
+  const screen = document.getElementById("playScreen");
+  const openTo = () => END[LEVELS[state.lvl]-1];
+
+  function playerHTML(){
+    return `
+      <div class="app">
+        <div class="app-top">
+          <span class="app-mark">Whistling<i>It</i></span>
+          <span class="streak">${ICON.flame}${STREAK}</span>
+        </div>
+
+        <div class="hero">
+          <span class="tag">${ANSWER.tag}</span>
+          <div class="count">
+            <h2 class="big ${state.bump ? "tick" : ""}" id="big">${LEVELS[state.lvl]}<em>/${TUNE.length}</em></h2>
+            <span class="count-lab">notes unlocked</span>
+          </div>
+          <button class="play" id="btnPlay" aria-label="Play">${ICON.play}</button>
+        </div>
+
+        <div class="bar" id="bar" role="slider" tabindex="0"
+             aria-label="Position in the whistle" aria-valuemin="0"
+             aria-valuemax="${Math.round(openTo())}" aria-valuenow="0">${barHTML({par:true,knob:true})}</div>
+
+        <div class="guess-field">
+          <input id="guessIn" type="text" placeholder="Name that tune" autocomplete="off" spellcheck="false">
+          <button class="btn-go" id="btnGuess" disabled aria-label="Guess">${ICON.go}</button>
+        </div>
+
+        <div class="under">
+          <button class="btn-skip" id="btnSkip">${
+            state.lvl < 4 ? "Skip · hear " + LEVELS[state.lvl+1] + "/" + TUNE.length
+            : state.lvl === 4 ? "Skip · hear all " + TUNE.length
+            : "Give up"
+          }</button>
+          <p class="flash" id="flash"></p>
+        </div>
+      </div>`;
+  }
+
+  function resultHTML(won, lvl, tape, again){
+    const cells = Array.from({length:6}, (_,i) => {
+      if (won && i === lvl) return '<i class="win"></i>';
+      const t = tape[i];
+      return !t ? "<i></i>" : t === "skip" ? '<i class="skip"></i>' : '<i class="wrong"></i>';
+    }).join("");
+    const mine = !won ? "missed it" : lvl === 5 ? "the whole thing" : "note " + LEVELS[lvl];
+    return `
+      <div class="res">
+        <div class="app-top">
+          <span class="app-mark">Whistling<i>It</i></span>
+          <span class="streak">${ICON.flame}${won ? STREAK+1 : 0}</span>
+        </div>
+
+        <div class="res-hero ${won ? "" : "miss"}">
+          <span class="res-kicker">${won ? "Solved" : "Out of notes"}</span>
+          <h2 class="res-title">${ANSWER.title}</h2>
+          <p class="res-from">${ANSWER.from}</p>
+        </div>
+
+        <div class="tape">${cells}</div>
+        <p class="res-line"><b>${mine}</b> · most got it on ${AVG}</p>
+
+        <button class="btn-share" type="button" data-share>Copy result</button>
+        <p class="countdown">Next whistle in <b data-count>00:00:00</b></p>
+        ${again ? '<button class="btn-skip" type="button" data-again>Replay the prototype</button>' : ""}
+      </div>`;
+  }
+
+  /* ── transport ── */
+  let startCtxTime = 0, startPos = 0, raf = 0;
+  function stop(){
+    killAudio(); state.playing = false;
+    const b = document.getElementById("btnPlay");
+    if (b){ b.innerHTML = ICON.play; b.classList.remove("on"); b.setAttribute("aria-label","Play"); }
+  }
+  function play(){
+    const c = audio(); killAudio();
+    const to = openTo();
+    if (state.pos >= to - .05) state.pos = 0;
+    const off = state.pos, at = c.currentTime + .06;
+    const out = c.createGain(); out.gain.value = .95; out.connect(c.destination); live.push(out);
+    for (let i=0;i<LEVELS[state.lvl];i++){
+      if (END[i] <= off) continue;
+      const s = Math.max(START[i], off);
+      note(i, at + (s - off), END[i] - s, out, s > START[i]);
+    }
+    startCtxTime = at; startPos = off; state.playing = true;
+    const b = document.getElementById("btnPlay");
+    b.innerHTML = ICON.pause; b.classList.add("on"); b.setAttribute("aria-label","Pause");
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(tick);
+  }
+  function tick(){
+    if (!state.playing) return;
+    const to = openTo();
+    state.pos = startPos + Math.max(0, ctx.currentTime - startCtxTime);
+    if (state.pos >= to){ state.pos = to; paint(); stop(); return; }
+    paint();
+    raf = requestAnimationFrame(tick);
+  }
+  function paint(){
+    const bar = document.getElementById("bar");
+    if (!bar) return;
+    barPaint(bar, openTo(), state.pos);
+    bar.setAttribute("aria-valuenow", Math.round(state.pos));
+    bar.setAttribute("aria-valuetext", state.pos.toFixed(1) + " of " + openTo().toFixed(1) + " seconds unlocked");
+  }
+
+  let flashTimer = 0;
+  function flash(msg){
+    const f = document.getElementById("flash");
+    if (!f) return;
+    f.innerHTML = msg;
+    f.classList.add("on");
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => f.classList.remove("on"), 2200);
+  }
+
+  const norm = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")
+                     .replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+  // Forward match, plus a narrow reverse match for typos and truncation. The reverse
+  // direction must cover nearly the whole accepted answer, or a fragment ("the",
+  // "pot", "wig") would score a win.
+  const isRight = v => {
+    const n = norm(v);
+    if (n.length < 3) return false;
+    return ANSWER.accept.some(a =>
+      n.includes(a) || (n.length >= 6 && n.length >= a.length - 2 && a.includes(n))
+    );
+  };
+
+  function advance(kind){
+    state.tape.push(kind);
+    stop(); state.pos = 0;
+    if (state.lvl >= 5){ state.done = { won:false }; render(); return; }
+    state.lvl++; state.bump = true;
+    render();
+    state.bump = false;
+  }
+
+  function shareText(won, lvl, tape){
+    const cells = Array.from({length:6}, (_,i) => {
+      if (won && i === lvl) return "🟩";
+      const t = tape[i];
+      return !t ? "⬜" : t === "skip" ? "🟨" : "🟥";
+    }).join("");
+    const verdict = !won ? "missed" : lvl === 5 ? "the whole thing" : "note " + LEVELS[lvl];
+    return `WhistlingIt 27/08\n${cells} ${verdict}\n🔥 ${won ? STREAK+1 : 0}`;
+  }
+
+  const countTimers = new Map();
+  function wireResult(root, won, lvl, tape, again){
+    const sh = root.querySelector("[data-share]");
+    sh.addEventListener("click", () => {
+      const txt = shareText(won, lvl, tape);
+      const done = () => { sh.textContent = "Copied ✓"; setTimeout(() => sh.textContent = "Copy result", 1600); };
+      if (navigator.clipboard) navigator.clipboard.writeText(txt).then(done, done); else done();
+    });
+    const cd = root.querySelector("[data-count]");
+    clearInterval(countTimers.get(root));
+    const beat = () => {
+      const now = new Date(), next = new Date(now); next.setHours(24,0,0,0);
+      const s = Math.floor((next - now)/1000);
+      cd.textContent = [Math.floor(s/3600), Math.floor(s/60)%60, s%60]
+        .map(v => String(v).padStart(2,"0")).join(":");
+    };
+    beat(); countTimers.set(root, setInterval(beat, 1000));
+    const ag = root.querySelector("[data-again]");
+    if (ag && again) ag.addEventListener("click", again);
+  }
+
+  function render(){
+    if (state.done){
+      const won = state.done.won;
+      screen.innerHTML = resultHTML(won, state.lvl, state.tape, true);
+      wireResult(screen, won, state.lvl, state.tape, () => {
+        state.lvl = 0; state.tape = []; state.done = null; state.pos = 0; render();
+      });
+      return;
+    }
+
+    screen.innerHTML = playerHTML();
+    paint();
+
+    document.getElementById("btnPlay").addEventListener("click", () => state.playing ? stop() : play());
+    document.getElementById("btnSkip").addEventListener("click", () => advance("skip"));
+
+    const inp = document.getElementById("guessIn"), go = document.getElementById("btnGuess");
+    if (state.refocus){ state.refocus = false; inp.focus({ preventScroll:true }); }
+    const submit = () => {
+      const v = inp.value.trim(); if (!v || inp.disabled) return;
+      if (isRight(v)){ stop(); state.done = { won:true }; render(); return; }
+      const shown = "✕ <s>" + v.replace(/</g,"&lt;") + "</s>";
+      flash(shown);
+      inp.disabled = true; go.disabled = true; state.refocus = true;
+      // let the strike-through land, then let the count flip over it
+      setTimeout(() => { advance("wrong"); flash(shown); }, 520);
+    };
+    inp.addEventListener("input", () => { go.disabled = !inp.value.trim(); });
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+    go.addEventListener("click", submit);
+
+    // scrub — unlocked stretch only
+    const bar = document.getElementById("bar"), track = bar.querySelector(".bar-track");
+    const at = e => {
+      const r = track.getBoundingClientRect();
+      return ((e.clientX - r.left) / r.width) * TOTAL;
+    };
+    const seek = (t, was) => {
+      state.pos = Math.max(0, Math.min(t, openTo()));
+      paint();
+      if (was) play();
+    };
+    track.addEventListener("pointerdown", e => {
+      const t = at(e);
+      if (t > openTo() + .15){ barShake(bar); return; }
+      const was = state.playing; stop(); seek(t, was);
+      state.drag = true; track.setPointerCapture(e.pointerId);
+    });
+    track.addEventListener("pointermove", e => {
+      if (!state.drag) return;
+      state.pos = Math.max(0, Math.min(at(e), openTo())); paint();
+    });
+    const end = () => { state.drag = false; };
+    track.addEventListener("pointerup", end);
+    track.addEventListener("pointercancel", end);
+
+    bar.addEventListener("keydown", e => {
+      const to = openTo();
+      if (e.key === " " || e.key === "Enter"){ e.preventDefault(); state.playing ? stop() : play(); return; }
+      let next = null;
+      if (e.key === "ArrowRight") next = state.pos + .5;
+      else if (e.key === "ArrowLeft") next = state.pos - .5;
+      else if (e.key === "Home") next = 0;
+      else if (e.key === "End") next = to;
+      else return;
+      e.preventDefault();
+      if (next > to + .15){ barShake(bar); return; }
+      const was = state.playing; stop(); seek(next, was);
+    });
+  }
+
+  /* ══════════ the static miss card ══════════ */
+  const missTape = ["wrong","wrong","skip","wrong","wrong","wrong"];
+  const missScreen = document.getElementById("missScreen");
+  missScreen.innerHTML = resultHTML(false, 5, missTape, false);
+  wireResult(missScreen, false, 5, missTape, null);
+
+  /* ══════════ masthead demo — the mechanic in one object ══════════ */
+  const demoBar = document.getElementById("demoBar");
+  const demoNum = document.getElementById("demoNum"), demoCap = document.getElementById("demoCap");
+  demoBar.innerHTML = barHTML({ par:true });
+  let demoLvl = 0;
+  const demoLabel = l => LEVELS[l] + '<em>/' + TUNE.length + '</em>';
+  function demoStep(){
+    barPaint(demoBar, END[LEVELS[demoLvl]-1], 0);
+    demoNum.innerHTML = demoLabel(demoLvl);
+    demoNum.animate([{opacity:0,transform:"translateY(-10px)"},{opacity:1,transform:"none"}],
+                    {duration:300,easing:"cubic-bezier(.2,.9,.3,1)"});
+    demoCap.textContent = demoLvl === 5 ? "…and the day is over" : "a miss buys the next note";
+    demoLvl = (demoLvl + 1) % 6;
+  }
+  if (reduced){ barPaint(demoBar, END[2], 0); demoNum.innerHTML = demoLabel(0); }
+  else { barPaint(demoBar, END[2], 0); demoNum.innerHTML = demoLabel(0); demoLvl = 1; setInterval(demoStep, 1900); }
+
+  /* ══════════ type picker — reskins the page live ══════════ */
+  const PAIRS = [
+    { id:"toy",   name:"Toy",        d:'"Unbounded"',  b:'"Familjen Grotesk"', m:'"Martian Mono"',
+      w:900, ls:"-.05em",
+      desc:"Wide geometric. Reads like a plastic handheld — closest to where we started." },
+    { id:"score", name:"Scoreboard", d:'"Anton"',      b:'"Archivo"',          m:'"Chivo Mono"',
+      w:400, ls:"-.01em",
+      desc:"Tall and condensed. The count reads like a stadium clock. Best of the four at big numbers." },
+    { id:"hall",  name:"Music hall", d:'"Fraunces"',   b:'"Hanken Grotesk"',   m:'"Azeret Mono"',
+      w:900, ls:"-.03em",
+      desc:"A wonky old-style serif. Warmer and more human — whistling is a mouth, not a machine." },
+    { id:"fair",  name:"Fairground", d:'"Bungee"',     b:'"Figtree"',          m:'"IBM Plex Mono"',
+      w:400, ls:"0",
+      desc:"Signage lettering. Loudest of the four, real funfair energy, hardest to read small." }
+  ];
+  const STORE = "whistlingit.type";
+  const pickBox = document.getElementById("typePick");
+
+  function applyPair(p){
+    const r = document.documentElement.style;
+    r.setProperty("--font-display", p.d + ',system-ui,sans-serif');
+    r.setProperty("--font-body",    p.b + ',"Helvetica Neue",Helvetica,sans-serif');
+    r.setProperty("--font-mono",    p.m + ',ui-monospace,Menlo,monospace');
+    r.setProperty("--w-display", String(p.w));
+    r.setProperty("--ls-display", p.ls);
+    pickBox.querySelectorAll(".tp").forEach(el =>
+      el.setAttribute("aria-pressed", String(el.dataset.id === p.id)));
+    try { localStorage.setItem(STORE, p.id); } catch(e){}
+  }
+
+  let saved = null;
+  try { saved = localStorage.getItem(STORE); } catch(e){}
+  const startId = PAIRS.some(p => p.id === saved) ? saved : "toy";
+
+  pickBox.innerHTML = PAIRS.map(p => `
+    <button class="tp" type="button" data-id="${p.id}" aria-pressed="${p.id === startId}">
+      <span class="tp-name">${p.name}${p.id === "toy" ? " <em>default</em>" : ""}</span>
+      <span class="tp-num" style="font-family:${p.d},sans-serif;font-weight:${p.w};letter-spacing:${p.ls}">4<em>/14</em></span>
+      <span class="tp-body" style="font-family:${p.b},sans-serif">Name that tune</span>
+      <span class="tp-mono" style="font-family:${p.m},monospace">Film · Tricky</span>
+      <span class="tp-desc">${p.desc}</span>
+    </button>`).join("");
+
+  pickBox.addEventListener("click", e => {
+    const b = e.target.closest(".tp"); if (!b) return;
+    applyPair(PAIRS.find(x => x.id === b.dataset.id));
+  });
+  if (startId !== "toy") applyPair(PAIRS.find(x => x.id === startId));
+
+  /* ══════════ booth ══════════ */
+  const boothBar = document.getElementById("boothBar");
+  boothBar.innerHTML = barHTML({});
+  barPaint(boothBar, TOTAL, 0);
+
+  document.getElementById("catPick").addEventListener("click", e => {
+    const b = e.target.closest(".pick-chip"); if (!b) return;
+    document.querySelectorAll("#catPick .pick-chip").forEach(x => x.setAttribute("aria-pressed","false"));
+    b.setAttribute("aria-pressed","true");
+  });
+  const aliasBox = document.getElementById("aliasBox"), aliasIn = document.getElementById("aliasIn");
+  aliasBox.addEventListener("click", e => { if (e.target.tagName === "BUTTON") e.target.parentElement.remove(); });
+  aliasIn.addEventListener("keydown", e => {
+    if (e.key !== "Enter" || !aliasIn.value.trim()) return;
+    e.preventDefault();
+    const s = document.createElement("span");
+    s.innerHTML = `${aliasIn.value.trim().replace(/</g,"&lt;")} <button type="button" aria-label="Remove">×</button>`;
+    aliasBox.appendChild(s); aliasIn.value = "";
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
