@@ -16,11 +16,15 @@ export function Tape({ tape, rungs, won }: { tape: TryKind[]; rungs: number; won
   );
 }
 
-/** The same tape as text. Emoji, because it has to survive a paste into anything. */
+/**
+ * The same tape as text. Emoji, because it has to survive a paste into anything.
+ * Skips use fast-forward rather than a colour of their own, matching the on-screen
+ * tape where a skip and a wrong guess read the same and only the glyph differs.
+ */
 export function tapeText(tape: TryKind[], rungs: number, won: boolean): string {
   return Array.from({ length: rungs }, (_, i) => {
     if (won && i === tape.length) return "🟩";
     const t = tape[i];
-    return !t ? "⬜" : t === "skip" ? "🟨" : "🟥";
+    return !t ? "⬜" : t === "skip" ? "⏩" : "🟥";
   }).join("");
 }

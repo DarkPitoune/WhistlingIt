@@ -15,6 +15,8 @@ export interface SavedRound {
   clipId: string;
   level: number;
   tape: TryKind[];
+  /** The wrong guesses, in order. They stay on screen for the whole round. */
+  guesses: string[];
   done: null | { won: boolean };
 }
 

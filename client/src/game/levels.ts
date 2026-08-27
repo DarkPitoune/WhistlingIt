@@ -1,7 +1,7 @@
 import type { DailyClip } from "../api";
 
 /**
- * The ladder: three notes, then one more per miss, then the whole thing.
+ * The ladder: three notes, then one more per miss, then the whole tune.
  *
  * Derived from the clip's note count rather than hardcoded to 14, and clamped so a
  * short clip doesn't offer levels it can't fill.
@@ -18,6 +18,8 @@ export function makeLadder(noteCount: number): number[] {
 
 /** Seconds of the clip unlocked at a given rung — the end of the last unlocked note. */
 export function unlockedSeconds(clip: DailyClip, notes: number): number {
-  const i = Math.min(notes, clip.noteEnds.length) - 1;
-  return clip.noteEnds[i] ?? clip.duration;
+  // The last rung is the whole file, tail included. Stopping at the final note's end
+  // would leave the ring-out hatched, so the bar could never fill.
+  if (notes >= clip.noteEnds.length) return clip.duration;
+  return clip.noteEnds[notes - 1] ?? clip.duration;
 }

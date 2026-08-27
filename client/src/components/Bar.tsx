@@ -9,7 +9,8 @@ export interface BarProps {
   heard?: number;
   /** Seconds at which the remaining levels unlock. */
   ticks?: number[];
-  /** Seconds at which the median player solves it — par on a scorecard. */
+  /** Seconds at which the median player solves it. */
+  parTs?: number;
   par?: number;
   onSeek?: (t: number) => void;
   showKnob?: boolean;
@@ -22,7 +23,7 @@ export interface BarProps {
  * Consolidating those is what let the level ladder, the tries counter and the
  * guess-history list all come off the screen.
  */
-export function Bar({ duration, open, heard = 0, ticks = [], par, onSeek, showKnob }: BarProps) {
+export function Bar({ duration, open, heard = 0, ticks = [], parTs, par, onSeek, showKnob }: BarProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [shake, setShake] = useState(false);
   const dragging = useRef(false);
@@ -74,7 +75,7 @@ export function Bar({ duration, open, heard = 0, ticks = [], par, onSeek, showKn
 
   return (
     <div
-      className={`bar${par !== undefined ? " bar--par" : ""}${shake ? " shake" : ""}`}
+      className={`bar${parTs !== undefined ? " bar--par" : ""}${shake ? " shake" : ""}`}
       onAnimationEnd={() => setShake(false)}
     >
       <div
@@ -97,20 +98,22 @@ export function Bar({ duration, open, heard = 0, ticks = [], par, onSeek, showKn
             }
           : {})}
       >
-        <div className="bar-open" style={{ width: `${pct(open)}%` }} />
-        <div className="bar-heard" style={{ width: `${pct(Math.min(heard, open))}%` }} />
-        <div className="bar-lock" style={{ left: `${pct(open)}%` }} />
-        {ticks.map((t, i) => (
-          <i key={i} className="bar-tick" style={{ left: `${pct(t)}%` }} />
-        ))}
+        <div className="bar-fills">
+          <div className="bar-open" style={{ width: `${pct(open)}%` }} />
+          <div className="bar-heard" style={{ width: `${pct(Math.min(heard, open))}%` }} />
+          <div className="bar-lock" style={{ left: `${pct(open)}%` }} />
+          {ticks.map((t, i) => (
+            <i key={i} className="bar-tick" style={{ left: `${pct(t)}%` }} />
+          ))}
+        </div>
         {showKnob && <span className="bar-knob" style={{ left: `${pct(Math.min(heard, open))}%` }} />}
+        {parTs !== undefined && (
+          <span className="bar-par" style={{ left: `${pct(parTs)}%` }}>
+            <span>par {par}</span>
+            <b />
+          </span>
+        )}
       </div>
-      {par !== undefined && (
-        <span className="bar-par" style={{ left: `${pct(par)}%` }}>
-          <span>avg</span>
-          <b />
-        </span>
-      )}
     </div>
   );
 }

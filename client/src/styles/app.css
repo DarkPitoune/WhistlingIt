@@ -146,28 +146,43 @@ button { font: inherit; color: inherit; }
 }
 .bar-track.static { cursor: default; }
 
+/* Clips the fills to the track's pill, so a full bar has exactly the same round ends
+   as its container instead of square corners poking into them. Inset sits inside the
+   1.5px border, and 999px clamps to the same 7px inner radius the border describes.
+   The knob is deliberately left outside this — it's meant to overflow the track. */
+.bar-fills {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  overflow: hidden;
+}
 .bar-open {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: 999px 0 0 999px;
   background: var(--ink);
   transition: width .34s cubic-bezier(.2, .8, .3, 1);
 }
 .bar-heard {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: 999px 0 0 999px;
   background: var(--blaze);
 }
 .bar-lock {
   position: absolute;
   top: 0; bottom: 0; right: 0;
-  border-radius: 0 999px 999px 0;
-  overflow: hidden;
   transition: left .34s cubic-bezier(.2, .8, .3, 1);
   background: repeating-linear-gradient(-45deg, transparent 0 4px, var(--hatch) 4px 8px);
 }
-.bar-tick { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--panel); opacity: .85; }
+/* Centred on its position, not anchored left of it — so it lines up with the par
+   marker, which is centred too. */
+.bar-tick {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: var(--panel);
+  opacity: .85;
+  transform: translateX(-50%);
+}
 .bar-knob {
   position: absolute;
   top: 50%;
@@ -179,10 +194,12 @@ button { font: inherit; color: inherit; }
   pointer-events: none;
 }
 /* Label above, tick below, meeting the top of the track. Sums to the 22px of
-   headroom .bar--par reserves: 8px label + 2px gap + 12px tick. */
+   headroom .bar--par reserves: 8px label + 2px gap + 12px tick.
+   Lives inside .bar-track so its percentage resolves against the same box as the
+   level ticks — measured off the outer .bar instead, it drifts by the border width. */
 .bar-par {
   position: absolute;
-  top: 0;
+  bottom: 100%;
   transform: translateX(-50%);
   pointer-events: none;
   display: flex;
@@ -197,7 +214,7 @@ button { font: inherit; color: inherit; }
   letter-spacing: .06em;
   color: var(--blaze);
 }
-.bar-par b { width: 2px; height: 12px; background: var(--blaze); border-radius: 1px; }
+.bar-par b { width: 2px; height: 12px; background: var(--blaze); }
 
 /* ───────────────────────── the daily ───────────────────────── */
 .daily {
@@ -336,17 +353,27 @@ button { font: inherit; color: inherit; }
   padding: 2px 0;
 }
 
-.flash {
-  font-size: 13px;
-  color: var(--blaze);
-  opacity: 0;
-  transition: opacity .2s ease;
+/* Every wrong guess stays put for the round — you shouldn't have to remember what
+   you've already tried. Newest in blaze, the rest recede. */
+.misses {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  text-align: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px 12px;
+  font-size: 13px;
+  color: var(--ink-soft);
 }
-.flash.on { opacity: 1; }
+.misses span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  animation: missin .2s ease-out;
+}
+.misses span.last { color: var(--blaze); }
+@keyframes missin {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
 
 /* ───────────────────────── the reveal ───────────────────────── */
 .reveal {
@@ -383,9 +410,22 @@ button { font: inherit; color: inherit; }
 
 /* Six blocks, one per try. This gets pasted into a group chat — it has to read at 40px. */
 .tape { display: flex; gap: 5px; }
-.tape i { height: 30px; flex: 1; border-radius: 6px; background: var(--rule-soft); display: block; }
+.tape i { height: 30px; flex: 1; border-radius: 6px; background: var(--rule-soft); display: block; position: relative; }
 .tape i.wrong { background: var(--blaze); }
-.tape i.skip { background: var(--butter); }
+/* A skip and a wrong guess cost the same, so they read the same. The glyph is the
+   only thing telling them apart — one currency, two ways of spending it. */
+.tape i.skip { background: var(--blaze); }
+.tape i.skip::after {
+  content: "⏵⏵";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--blaze-ink);
+  font-size: 13px;
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
 .tape i.win { background: var(--good); }
 
 .res-line {

@@ -15,6 +15,8 @@ export interface Round {
   ladder: number[];
   level: number;
   tape: TryKind[];
+  /** Every wrong guess this round, oldest first. Stays on screen until the round ends. */
+  wrongGuesses: string[];
   done: null | { won: boolean };
   streak: number;
   /** True for one render after a level unlocks, to drive the count's flip animation. */
@@ -27,7 +29,7 @@ export interface Round {
   solve: () => void;
   /** Spend a note on a wrong guess. Kept separate from `check` so the screen can let
    *  the struck-through guess land before the count flips over it. */
-  miss: () => void;
+  miss: (text: string) => void;
   skip: () => void;
 }
 
@@ -37,6 +39,7 @@ export function useRound(clip: DailyClip): Round {
   const saved = useMemo(() => loadRound(clip.date, clip.id), [clip.date, clip.id]);
   const [level, setLevel] = useState(() => Math.min(saved?.level ?? 0, ladder.length - 1));
   const [tape, setTape] = useState<TryKind[]>(() => saved?.tape ?? []);
+  const [wrongGuesses, setWrongGuesses] = useState<string[]>(() => saved?.guesses ?? []);
   const [done, setDone] = useState<null | { won: boolean }>(() => saved?.done ?? null);
   const [streak, setStreak] = useState(() => loadStreak());
   const [bumped, setBumped] = useState(false);
@@ -45,19 +48,19 @@ export function useRound(clip: DailyClip): Round {
   const settled = useRef(saved?.done != null);
 
   const persist = useCallback(
-    (next: { level: number; tape: TryKind[]; done: null | { won: boolean } }) => {
+    (next: { level: number; tape: TryKind[]; guesses: string[]; done: null | { won: boolean } }) => {
       saveRound({ date: clip.date, clipId: clip.id, ...next });
     },
     [clip.date, clip.id],
   );
 
   const finish = useCallback(
-    (won: boolean, atLevel: number, finalTape: TryKind[]) => {
+    (won: boolean, atLevel: number, finalTape: TryKind[], finalGuesses: string[]) => {
       if (settled.current) return;
       settled.current = true;
       setDone({ won });
       setStreak(recordResult(won));
-      persist({ level: atLevel, tape: finalTape, done: { won } });
+      persist({ level: atLevel, tape: finalTape, guesses: finalGuesses, done: { won } });
       void api
         .submitRound({
           clipId: clip.id,
@@ -73,13 +76,15 @@ export function useRound(clip: DailyClip): Round {
 
   /** A miss: buy the next note, or end the round if there are none left. */
   const spend = useCallback(
-    (kind: TryKind) => {
+    (kind: TryKind, text?: string) => {
       if (done) return;
       const nextTape = [...tape, kind];
+      const nextGuesses = text ? [...wrongGuesses, text] : wrongGuesses;
       setTape(nextTape);
+      if (text) setWrongGuesses(nextGuesses);
 
       if (level >= ladder.length - 1) {
-        finish(false, level, nextTape);
+        finish(false, level, nextTape, nextGuesses);
         return;
       }
       const nextLevel = level + 1;
@@ -87,9 +92,9 @@ export function useRound(clip: DailyClip): Round {
       setBumped(true);
       // One frame of the flip animation, then clear so a re-render doesn't replay it.
       requestAnimationFrame(() => requestAnimationFrame(() => setBumped(false)));
-      persist({ level: nextLevel, tape: nextTape, done: null });
+      persist({ level: nextLevel, tape: nextTape, guesses: nextGuesses, done: null });
     },
-    [done, tape, level, ladder.length, finish, persist],
+    [done, tape, wrongGuesses, level, ladder.length, finish, persist],
   );
 
   const check = useCallback(
@@ -98,10 +103,10 @@ export function useRound(clip: DailyClip): Round {
   );
 
   const solve = useCallback(() => {
-    if (!done) finish(true, level, tape);
-  }, [done, finish, level, tape]);
+    if (!done) finish(true, level, tape, wrongGuesses);
+  }, [done, finish, level, tape, wrongGuesses]);
 
-  const miss = useCallback(() => spend("wrong"), [spend]);
+  const miss = useCallback((text: string) => spend("wrong", text), [spend]);
   const skip = useCallback(() => spend("skip"), [spend]);
 
   const notes = ladder[level] ?? clip.noteStarts.length;
@@ -113,6 +118,7 @@ export function useRound(clip: DailyClip): Round {
     ladder,
     level,
     tape,
+    wrongGuesses,
     done,
     streak,
     bumped,

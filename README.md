@@ -2,7 +2,7 @@
 
 A daily blind test where every clip is someone **whistling** the tune instead of the real recording.
 One track per day for everyone. You start with three notes; every miss buys you one more, until the
-whole thing plays and the day is over.
+whole tune plays and the day is over.
 
 This repo holds the **interface design**, the **frontend** and the **backend**. The client reads the
 daily straight from Supabase; the booth posts to a small Python service that decides whether what

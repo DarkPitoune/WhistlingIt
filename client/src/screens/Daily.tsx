@@ -11,7 +11,8 @@ const STRIKE_MS = 520;
 export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
   const player = useClipPlayer(clip.audioUrl, round.unlocked, clip.startAt ?? 0);
   const [value, setValue] = useState("");
-  const [flash, setFlash] = useState<string | null>(null);
+  /** The guess just submitted, held locally until `round.miss` commits it. */
+  const [pending, setPending] = useState<string | null>(null);
   const [locked, setLocked] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const timers = useRef<number[]>([]);
@@ -28,25 +29,29 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
       .filter((t): t is number => t !== undefined),
     [round.ladder, clip.noteStarts],
   );
-  const par = clip.noteEnds[clip.avgSolveNote - 1];
+  const parTs = clip.noteEnds[clip.avgSolveNote - 1];
+
+  const misses = pending ? [...round.wrongGuesses, pending] : round.wrongGuesses;
 
   const submit = () => {
     const v = value.trim();
     if (!v || locked) return;
     if (round.check(v)) { round.solve(); return; }   // the parent swaps in the reveal
 
-    setFlash(v);
+    // Shown immediately; `round.miss` commits it to the round a beat later, so the
+    // strike-through lands before the count flips over it. Both land in the same
+    // render, so the entry doesn't blink as it moves from pending to committed.
+    setPending(v);
     setLocked(true);
     setValue("");
     player.pause();
-    // Let the strike-through land, then let the count flip over it.
     timers.current.push(
       window.setTimeout(() => {
-        round.miss();
+        round.miss(v);
+        setPending(null);
         setLocked(false);
         inputRef.current?.focus({ preventScroll: true });
       }, STRIKE_MS),
-      window.setTimeout(() => setFlash(null), STRIKE_MS + 2200),
     );
   };
 
@@ -84,7 +89,7 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
         open={round.unlocked}
         heard={player.pos}
         ticks={ticks}
-        {...(par !== undefined ? { par } : {})}
+        {...(parTs !== undefined ? { parTs, par: clip.avgSolveNote } : {})}
         onSeek={(t) => { player.pause(); player.seek(t); }}
         showKnob
       />
@@ -111,9 +116,15 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
 
       <div className="under">
         <button className="btn-skip" onClick={round.skip}>{skipLabel}</button>
-        <p className={`flash${flash ? " on" : ""}`} aria-live="polite">
-          {flash && <>✕ <s>{flash}</s></>}
-        </p>
+        {misses.length > 0 && (
+          <p className="misses" aria-live="polite" aria-label="Wrong guesses so far">
+            {misses.map((g, i) => (
+              <span key={`${g}-${i}`} className={i === misses.length - 1 ? "last" : ""}>
+                ✕ <s>{g}</s>
+              </span>
+            ))}
+          </p>
+        )}
       </div>
 
       {player.error && <p className="hint" style={{ textAlign: "center" }}>{player.error}</p>}

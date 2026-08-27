@@ -44,13 +44,13 @@ export function Reveal({ clip, round }: { clip: DailyClip; round: Round }) {
 
       <Tape tape={round.tape} rungs={round.ladder.length} won={won} />
       <p className="res-line">
-        <b>{verdict(won, round)}</b> · most got it on {clip.avgSolveNote}
+        <b>{won ? "got it on" : ""} {verdict(won, round)}</b> · most got it on {clip.avgSolveNote}
       </p>
 
-      {/* Now that the day is done, the whole thing is listenable. */}
+      {/* Now that the day is done, the whole tune is listenable. */}
       <button className="btn-replay" onClick={player.toggle} disabled={!player.ready}>
         {player.playing ? <PauseIcon /> : <PlayIcon />}
-        {player.playing ? "Playing the whole thing" : "Hear the whole thing"}
+        {player.playing ? "Playing the whole tune" : "Hear the whole tune"}
       </button>
       <Bar duration={clip.duration} open={clip.duration} heard={player.pos} showKnob />
 
@@ -62,7 +62,7 @@ export function Reveal({ clip, round }: { clip: DailyClip; round: Round }) {
 
 function verdict(won: boolean, round: Round): string {
   if (!won) return "missed it";
-  return round.notes === round.total ? "the whole thing" : `note ${round.notes}`;
+  return `note ${round.notes}/${round.total}`;
 }
 
 /** Time to local midnight. Matches the mock's local-date rollover. */
