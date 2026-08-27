@@ -1,0 +1,42 @@
+{
+  "_": "The contract for normalize(). client/src/game/match.ts:normalise and server/api/app/normalize.py must both reproduce every pair here exactly. `npm run check:normalize` in client/ and pytest here both read this file. Add a case the moment either side surprises you.",
+  "_three_results_that_look_wrong_but_are_correct": [
+    "'The Godfather' -> 'the godfather': no leading-article rule. PLAN.md asks for one, but the client matches substrings in both directions, so a guess of 'The Godfather' still finds a stored 'godfather' and vice versa. An exact mirror is worth more than a rule only one side would know.",
+    "'Коробейники' -> 'коробеиники': NFD decomposes Cyrillic й into и + combining breve, and U+0300-U+036F is stripped. Same for ё -> е. Symmetric on both sides, and it makes the breve optional when guessing.",
+    "'Tet<ZWSP>ris' -> 'tet ris': a zero-width space is not a letter or a digit, so it becomes a gap like any other non-letter. Only leading and trailing ones disappear, via trim."
+  ],
+  "cases": [
+    ["Hedwig's Theme", "hedwigs theme"],
+    ["Hedwig’s Theme", "hedwigs theme"],
+    ["  Hedwig's Theme  ", "hedwigs theme"],
+    ["HEDWIG'S THEME", "hedwigs theme"],
+    ["Hedwig‘s  Theme", "hedwigs theme"],
+    ["Hedwigʼs Theme", "hedwigs theme"],
+    ["The Godfather", "the godfather"],
+    ["A Whole New World", "a whole new world"],
+    ["Le Parrain", "le parrain"],
+    ["La Vie en Rose", "la vie en rose"],
+    ["Les Misérables", "les miserables"],
+    ["À nos amours", "a nos amours"],
+    ["Nežnožt", "neznozt"],
+    ["Amélie", "amelie"],
+    ["Theme from Shaft", "theme from shaft"],
+    ["Star Wars: Main Title", "star wars main title"],
+    ["Mission-Impossible", "mission impossible"],
+    ["rock&roll", "rock roll"],
+    ["Ba-ba-ba (Baby)", "ba ba ba baby"],
+    ["9½ Weeks", "9½ weeks"],
+    ["Mr. Blue Sky", "mr blue sky"],
+    ["Also sprach Zarathustra…", "also sprach zarathustra"],
+    ["Tetris ", "tetris"],
+    ["​Tetris​", "tetris"],
+    ["Tet​ris", "tet ris"],
+    ["君の名は。", "君の名は"],
+    ["Коробейники", "коробеиники"],
+    ["!!!", ""],
+    ["", ""],
+    ["   ", ""],
+    ["The", "the"],
+    ["The The", "the the"]
+  ]
+}

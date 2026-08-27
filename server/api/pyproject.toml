@@ -1,0 +1,44 @@
+[project]
+name = "whistling-api"
+version = "0.1.0"
+description = "WhistlingIt ingest — transcode, analyze, gate, store — and the whistle-to-note-event pipeline it runs."
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "python-multipart>=0.0.9",
+  "supabase>=2.15",
+  # The pipeline is vendored into this package (./whistle) rather than pinned as
+  # a git dependency. `pipeline_version` is product state, so it needs a pin —
+  # and the repo's own commit is a stronger one than a SHA in this file: a
+  # note-boundary change and the code that caused it now land together.
+  #
+  # These two are the pipeline's entire runtime footprint. Keep it that way:
+  # no torch, no numba, no librosa. See CLAUDE.md.
+  "numpy>=1.26",
+  "scipy>=1.11",
+]
+
+[project.scripts]
+# `uv run whistle analyze samples/teo.ogg --plot` — the documented first step of
+# any segmentation debugging.
+whistle = "whistle.cli:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "httpx>=0.27",
+  # Debug plots only. Imported lazily inside whistle/plot.py, so it never
+  # reaches the runtime image.
+  "matplotlib>=3.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app", "whistle"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

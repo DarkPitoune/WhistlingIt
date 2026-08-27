@@ -1,0 +1,15 @@
+tests/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+README.md
+PIPELINE.md
+CLAUDE.md
+render.yaml
+# Local calibration material and debug plots. The image analyzes uploads, never
+# these; samples/ is real recordings and out/ is whatever --plot last wrote.
+samples/
+out/
+*.png

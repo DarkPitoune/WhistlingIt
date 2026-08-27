@@ -1,0 +1,28 @@
+# Render blueprint. Free tier spins down when idle, so most uploads pay a cold
+# start of tens of seconds — survivable, because only the booth ever waits on
+# this service. Measure it before deciding to pay for a warm instance.
+services:
+  - type: web
+    name: whistling-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    rootDir: server/api
+    # dockerfilePath and dockerContext are relative to rootDir, NOT to the repo
+    # root. The blueprint spec says "relative to the repo root" and the monorepo
+    # page says to rewrite them relative to the root directory; the monorepo page
+    # is the operative one. Keeping the Dockerfile at the context root makes the
+    # contradiction moot, which is why it stays here rather than at server/.
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      # Both set in the Render dashboard. The service key never leaves it.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      # Comma-separated. Empty or unset means "*", which is wrong in production.
+      - key: ALLOWED_ORIGINS
+        sync: false

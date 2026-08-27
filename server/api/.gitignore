@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+# Debug plots and wav slices from `whistle analyze --plot` / `whistle slice`.
+out/
+# Audio test material stays local: these are real recordings, not fixtures.
+samples/*
+!samples/.gitkeep
