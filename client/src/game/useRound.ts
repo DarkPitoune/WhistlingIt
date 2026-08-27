@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { DailyClip, TryKind } from "../api";
 import { api } from "../api";
-import { isRight } from "./match";
+import { acceptedFor, isRight } from "./match";
 import { makeLadder, unlockedSeconds } from "./levels";
 import { loadRound, loadStreak, recordResult, saveRound } from "./storage";
 
@@ -35,6 +35,10 @@ export interface Round {
 
 export function useRound(clip: DailyClip): Round {
   const ladder = useMemo(() => makeLadder(clip.noteStarts.length), [clip.noteStarts.length]);
+
+  // For a film or a series this also accepts the credit line, so naming the
+  // composer counts as getting it.
+  const accepted = useMemo(() => acceptedFor(clip), [clip]);
 
   const saved = useMemo(() => loadRound(clip.date, clip.id), [clip.date, clip.id]);
   const [level, setLevel] = useState(() => Math.min(saved?.level ?? 0, ladder.length - 1));
@@ -98,8 +102,8 @@ export function useRound(clip: DailyClip): Round {
   );
 
   const check = useCallback(
-    (text: string) => !done && isRight(text, clip.accepted),
-    [done, clip.accepted],
+    (text: string) => !done && isRight(text, accepted),
+    [done, accepted],
   );
 
   const solve = useCallback(() => {

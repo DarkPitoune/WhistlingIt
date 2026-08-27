@@ -34,7 +34,14 @@ export default function App() {
   return route === "booth"
     ? (
       <div className="shell">
-        <Header onHome={() => go("daily")} />
+        <Header
+          onHome={() => go("daily")}
+          right={
+            <button className="top-link" onClick={() => go("daily")}>
+              Back to the daily
+            </button>
+          }
+        />
         <Booth onLeave={() => go("daily")} />
       </div>
     )
@@ -103,7 +110,9 @@ function Game({ clip, onBooth }: { clip: DailyClip; onBooth: () => void }) {
         onHome={() => {}}
         right={
           <>
-            <button className="top-link" onClick={onBooth}>Booth</button>
+            <button className="top-link top-link--blaze" onClick={onBooth}>
+              Add your whistle!
+            </button>
             {round.streak > 0 && (
               <span className="streak" title={`${round.streak}-day streak`}>
                 <FlameIcon />{round.streak}

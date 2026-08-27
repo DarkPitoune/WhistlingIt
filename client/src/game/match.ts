@@ -42,6 +42,43 @@ export function normalise(s: string): string {
  * or a fragment like "the", "pot" or "wig" would score a win. That is what the
  * three-character floor protects, and it applies to substring matching only.
  */
+/**
+ * Categories where naming who wrote it counts as getting it.
+ *
+ * For a film or a series the composer is a real route to the answer — someone who
+ * hears Hedwig's Theme and says "John Williams" has recognised it. For a jingle or
+ * a pop tune the credit is trivia nobody would reach for, so it stays out.
+ */
+const CREDIT_CATEGORIES: readonly string[] = ["Film", "TV Series"];
+
+/**
+ * The accepted list a clip should actually be judged against.
+ *
+ * `from` is a free-text credit line — "Harry Potter · John Williams", or just
+ * "Danny Elfman" — so it is split on its separators and each part offered on its
+ * own. Parts under three characters are dropped; `isRight` would reject them
+ * anyway, and a stray initial should never win.
+ */
+export function acceptedFor(clip: {
+  accepted: readonly string[];
+  from?: string | null;
+  category?: string | null;
+}): string[] {
+  const base = [...clip.accepted];
+  if (!clip.from || !CREDIT_CATEGORIES.includes(clip.category ?? "")) return base;
+
+  const seen = new Set(base.map(normalise));
+  for (const part of clip.from.split(/[·,;|]|\s+\/\s+|\s+—\s+/)) {
+    const credit = part.trim();
+    if (credit.length < 3) continue;
+    const key = normalise(credit);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    base.push(credit);
+  }
+  return base;
+}
+
 export function isRight(guess: string, accepted: readonly string[]): boolean {
   const n = normalise(guess);
   if (!n) return false;

@@ -5,7 +5,7 @@ import { PauseIcon, PlayIcon } from "../components/icons";
 import { getContext, setAudioSession } from "../audio/context";
 import { useClipPlayer } from "../audio/useClipPlayer";
 
-const CATEGORIES: Category[] = ["Film", "Jingle", "TV", "Game", "Music"];
+const CATEGORIES: Category[] = ["Film", "TV Series", "Video Games", "Jingle", "Music"];
 
 interface Take {
   blob: Blob;
@@ -112,10 +112,21 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
     setRecording(false);
   };
 
-  const addAlias = () => {
-    const v = aliasDraft.trim();
-    if (!v || accepted.includes(v)) { setAliasDraft(""); return; }
-    setAccepted([...accepted, v]);
+  /**
+   * Commit whatever is in the box as one or more answers.
+   *
+   * Enter and comma both work, because "one per line" and "comma-separated" are
+   * both things people reasonably assume — guessing wrong shouldn't silently
+   * produce one answer that reads "poudlard, hogwarts".
+   */
+  const addAliases = (raw: string) => {
+    const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    if (!parts.length) { setAliasDraft(""); return; }
+    const next = [...accepted];
+    for (const p of parts) {
+      if (!next.some((a) => a.toLowerCase() === p.toLowerCase())) next.push(p);
+    }
+    setAccepted(next);
     setAliasDraft("");
   };
 
@@ -264,11 +275,19 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
               id="aliasIn"
               type="text"
               value={aliasDraft}
-              placeholder="Another spelling or language…"
+              placeholder="Type one, then press Enter"
               onChange={(e) => setAliasDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAlias(); } }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addAliases(aliasDraft); }
+              }}
+              // Tabbing or clicking away shouldn't quietly discard what's typed.
+              onBlur={() => addAliases(aliasDraft)}
             />
-            <p className="hint">Guessing is free text, so this list is the matching logic.</p>
+            <p className="hint">
+              One answer at a time — press <b>Enter</b> or type a comma after each. The title
+              already counts, so add other spellings, languages or nicknames. A guess wins if it
+              matches any one of them.
+            </p>
           </div>
 
           {/* No note-count gate here any more: the server's segmenter is the only

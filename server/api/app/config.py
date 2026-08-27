@@ -14,7 +14,7 @@ BUCKET = "songs"
 
 # Validated at the API, not by a check constraint: adding a category should be a
 # code change, not a migration. Mirrors the chips in the booth design.
-CATEGORIES = ("Film", "Jingle", "TV", "Game", "Music")
+CATEGORIES = ("Film", "TV Series", "Video Games", "Jingle", "Music")
 
 
 def _required(name: str) -> str:

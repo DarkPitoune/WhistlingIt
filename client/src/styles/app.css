@@ -109,6 +109,19 @@ button { font: inherit; color: inherit; }
 }
 .top-link:hover { border-color: var(--ink); color: var(--ink); }
 
+/* The one call to action outside the game itself. Blaze is spent on the play
+   button on the daily and on this — they never share a screen. */
+.top-link--blaze {
+  background: var(--blaze);
+  border-color: var(--ink);
+  color: var(--blaze-ink);
+  font-weight: 600;
+  box-shadow: 0 3px 0 var(--ink);
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+.top-link--blaze:hover { border-color: var(--ink); color: var(--blaze-ink); }
+.top-link--blaze:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
+
 .eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -228,14 +241,24 @@ button { font: inherit; color: inherit; }
 
 .hero { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 6px 0 2px; }
 
-.tag {
+/* Category and difficulty, as two chips between the bar and the guess field.
+   Read as pills rather than a caption, but stay off blaze — that belongs to the
+   play button, and a tag competing with it would be the loudest thing on screen. */
+.tags { display: flex; justify-content: center; gap: 8px; }
+
+.tag-chip {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 600;
-  letter-spacing: .13em;
+  letter-spacing: .11em;
   text-transform: uppercase;
-  color: var(--indigo);
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 2px solid var(--ink);
+  line-height: 1;
 }
+.tag-chip--cat { background: var(--indigo); border-color: var(--indigo); color: var(--on-indigo); }
+.tag-chip--diff { background: transparent; color: var(--ink); }
 
 .big {
   font-family: var(--font-display);

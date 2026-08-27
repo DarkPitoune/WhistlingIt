@@ -3,6 +3,7 @@ import type { DailyClip } from "../api";
 import { Bar } from "../components/Bar";
 import { GoIcon, PauseIcon, PlayIcon } from "../components/icons";
 import { useClipPlayer } from "../audio/useClipPlayer";
+import { useSpaceToggle } from "../audio/useSpaceToggle";
 import { tuneEnd } from "../game/levels";
 import type { Round } from "../game/useRound";
 
@@ -11,6 +12,7 @@ const STRIKE_MS = 520;
 
 export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
   const player = useClipPlayer(clip.audioUrl, round.unlocked, clip.startAt ?? 0);
+  useSpaceToggle(player.toggle, player.ready);
   const [value, setValue] = useState("");
   /** The guess just submitted, held locally until `round.miss` commits it. */
   const [pending, setPending] = useState<string | null>(null);
@@ -65,8 +67,6 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
   return (
     <div className="daily">
       <div className="hero">
-        <span className="tag">{clip.category} · {clip.difficulty}</span>
-
         <div className="count">
           {/* The number moving IS the "no". No error toast, no red banner. */}
           <h2 className={`big${round.bumped ? " tick" : ""}`} aria-live="polite">
@@ -94,6 +94,13 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
         onSeek={(t) => { player.pause(); player.seek(t); }}
         showKnob
       />
+
+      {/* Enough to frame the guess, not enough to narrow it. Sits against the input
+          rather than up by the count, so it reads as a hint while you type. */}
+      <div className="tags">
+        <span className="tag-chip tag-chip--cat">{clip.category}</span>
+        <span className="tag-chip tag-chip--diff">{clip.difficulty}</span>
+      </div>
 
       <div className="guess-field">
         <input

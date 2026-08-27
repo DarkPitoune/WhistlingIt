@@ -4,6 +4,7 @@ import { Bar } from "../components/Bar";
 import { Tape, tapeText } from "../components/Tape";
 import { PauseIcon, PlayIcon } from "../components/icons";
 import { useClipPlayer } from "../audio/useClipPlayer";
+import { useSpaceToggle } from "../audio/useSpaceToggle";
 import { tuneEnd } from "../game/levels";
 import type { Round } from "../game/useRound";
 
@@ -23,6 +24,7 @@ export function Reveal({ clip, round }: { clip: DailyClip; round: Round }) {
   const won = round.done?.won ?? false;
   // The round is over, so the whole clip is unlocked.
   const player = useClipPlayer(clip.audioUrl, tuneEnd(clip), clip.startAt ?? 0);
+  useSpaceToggle(player.toggle, player.ready);
   const [copied, setCopied] = useState(false);
   const countdown = useCountdown();
 

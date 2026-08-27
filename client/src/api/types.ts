@@ -11,7 +11,7 @@
  * actually validates an upload — the client sending a value the API doesn't know
  * is a 400, not a fallback.
  */
-export type Category = "Film" | "Jingle" | "TV" | "Game" | "Music";
+export type Category = "Film" | "Jingle" | "TV Series" | "Video Games" | "Music";
 
 /** Computed from the first hundred plays, never entered by the whistler. */
 export type Difficulty = "Easy" | "Fair" | "Tricky" | "Brutal";

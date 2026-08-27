@@ -86,10 +86,20 @@ type DailyRow = Pick<
   avg_solve_note: number;
 };
 
-// "Pop" and "Classical" were merged into "Music"; rows predating that still carry
-// the old values and fall through oneOf() to the default, which is fine — the tag
-// is decoration, not data anyone depends on.
-const CATEGORIES: readonly Category[] = ["Film", "Jingle", "TV", "Game", "Music"];
+const CATEGORIES: readonly Category[] = ["Film", "Jingle", "TV Series", "Video Games", "Music"];
+
+/**
+ * Categories have been renamed a few times. Rows written before a rename still
+ * carry the old text, and so does anything the ingest API writes until it is
+ * redeployed — without this map they would fall through oneOf() to "Film", which
+ * quietly mislabels a real row rather than leaving it unset.
+ */
+const LEGACY_CATEGORIES: Readonly<Record<string, Category>> = {
+  TV: "TV Series",
+  Game: "Video Games",
+  Pop: "Music",
+  Classical: "Music",
+};
 const DIFFICULTIES: readonly Difficulty[] = ["Easy", "Fair", "Tricky", "Brutal"];
 
 /**
@@ -115,7 +125,7 @@ export function toClip(row: DailyRow): DailyClip {
     // repo's reference clip it is 0.0 (the clip opens on the note), so the gap
     // only shows on a real recording with dead air at the front.
     startAt: row.reveal?.t0 ?? 0,
-    category: oneOf(CATEGORIES, row.category, "Film"),
+    category: oneOf(CATEGORIES, LEGACY_CATEGORIES[row.category ?? ""] ?? row.category, "Film"),
     difficulty: oneOf(DIFFICULTIES, row.difficulty, "Fair"),
     // Clamped because the bar indexes noteEnds with it.
     avgSolveNote: Math.min(Math.max(1, Math.round(row.avg_solve_note)), noteEnds.length || 1),
