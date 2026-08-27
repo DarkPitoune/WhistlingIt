@@ -19,24 +19,34 @@ export interface ClipPlayer {
 }
 
 /**
- * Plays a clip, but never past `limit` seconds.
+ * Plays `start` → `limit` seconds of a clip, and never past `limit`.
  *
  * `limit` is the unlocked stretch — the end of the last unlocked note. The rest of
  * the file is decoded and sitting in memory, so the gate is purely a scheduling
  * decision: we hand the source node a duration and it stops itself. That keeps the
  * cut sample-accurate instead of depending on a timer firing on time.
+ *
+ * `start` is the floor, not an offset: the playhead is always an absolute time in
+ * the file, so the bar plots it unchanged. It exists because recordings carry dead
+ * air at the front — the server reports the first note minus a short lead as
+ * `DailyClip.startAt`, and without honouring it the first reveal can be mostly
+ * silence. `seek` clamps to it, so "back to the top" means the first note, not 0.
  */
-export function useClipPlayer(url: string | null, limit: number): ClipPlayer {
+export function useClipPlayer(url: string | null, limit: number, start = 0): ClipPlayer {
   const [buffer, setBuffer] = useState<AudioBuffer | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [pos, setPos] = useState(0);
+  const [pos, setPos] = useState(start);
 
   // Live values for the animation frame loop, which must not close over stale state.
   const limitRef = useRef(limit);
   limitRef.current = limit;
-  const posRef = useRef(0);
+  // Guarded: a clip whose lead-in somehow reaches past the unlocked stretch would
+  // otherwise make every span negative and nothing would ever play.
+  const startRef = useRef(start);
+  startRef.current = Math.max(0, Math.min(start, limit));
+  const posRef = useRef(start);
 
   const nodes = useRef<{ src: AudioBufferSourceNode; gain: GainNode } | null>(null);
   const anchor = useRef({ ctxTime: 0, offset: 0 });
@@ -80,8 +90,11 @@ export function useClipPlayer(url: string | null, limit: number): ClipPlayer {
     teardown();
 
     const ctx = getContext();
-    // Reaching the end of the unlocked stretch and pressing play again restarts it.
-    const from = posRef.current >= limitRef.current - 0.05 ? 0 : posRef.current;
+    // Reaching the end of the unlocked stretch and pressing play again restarts it —
+    // from the first note, not from the top of the file.
+    const floor = startRef.current;
+    const spent = posRef.current >= limitRef.current - 0.05;
+    const from = spent || posRef.current < floor ? floor : posRef.current;
     const span = limitRef.current - from;
     if (span <= 0.01) return;
 
@@ -122,7 +135,7 @@ export function useClipPlayer(url: string | null, limit: number): ClipPlayer {
   }, [buffer, teardown]);
 
   const seek = useCallback((t: number) => {
-    const clamped = Math.max(0, Math.min(t, limitRef.current));
+    const clamped = Math.max(startRef.current, Math.min(t, limitRef.current));
     posRef.current = clamped;
     setPos(clamped);
   }, []);
@@ -132,6 +145,12 @@ export function useClipPlayer(url: string | null, limit: number): ClipPlayer {
   // A level unlocking mid-playback would leave the source node scheduled against the
   // old, shorter span. Stop rather than silently truncate.
   useEffect(() => { pause(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [limit]);
+
+  // A different clip means a different floor; don't leave the playhead behind it.
+  useEffect(() => {
+    posRef.current = startRef.current;
+    setPos(startRef.current);
+  }, [start]);
 
   useEffect(() => teardown, [teardown]);
 

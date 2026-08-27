@@ -33,6 +33,17 @@ export interface DailyClip {
   noteStarts: number[];
   /** End of each note, in seconds. Same length as noteStarts. */
   noteEnds: number[];
+  /**
+   * Where a reveal should *start*: the first note minus a short lead, or 0 if the
+   * clip opens on the note. Recordings routinely carry a second of dead air up
+   * front, which would otherwise be most of the first reveal.
+   *
+   * Optional because nothing consumes it yet: `useClipPlayer(audioUrl, unlocked)`
+   * plays 0 → unlocked with no start offset, so a clip with leading silence spends
+   * level 1 on silence. The server computes and ships this; wiring it into the
+   * player (or trimming the head at ingest instead) is the open decision.
+   */
+  startAt?: number;
   category: Category;
   difficulty: Difficulty;
   /** 1-based note number where the median player solves it. Drives the bar's tick. */

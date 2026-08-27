@@ -61,7 +61,7 @@ Both are tested against one file:
 
 ```sh
 cd server/api  && .venv/bin/python -m pytest      # the Python half
-cd client      && npm run check:normalize          # the JS half
+cd client      && npm run check:match              # the JS half, plus isRight
 ```
 
 `tests/normalize_fixtures.json` is the contract — 32 cases, and the Python is a
@@ -77,12 +77,17 @@ rule only one side would know about.
 ## Running it
 
 ```sh
-uv venv --python 3.12 .venv
-uv pip install --python .venv/bin/python fastapi "uvicorn[standard]" \
-   python-multipart supabase pytest httpx \
-   "whistle-pipeline @ file:///path/to/whistle-pipeline"     # local, for now
-.venv/bin/python -m pytest
-SUPABASE_URL=... SUPABASE_SERVICE_KEY=... .venv/bin/uvicorn app.main:app --reload
+uv sync                                  # the lockfile covers app/ and whistle/
+uv run pytest                            # 64: 50 API + 14 known-answer pipeline
+../scripts/api-dev.sh                    # wired to the local stack, CORS open to Vite
+```
+
+`api-dev.sh` reads the keys from `supabase status`, so nothing is hardcoded, and
+sets `ALLOWED_ORIGINS` to Vite's origin — unset, the API falls back to `*`, which
+is fine locally and wrong in production. To run it by hand:
+
+```sh
+SUPABASE_URL=... SUPABASE_SERVICE_KEY=... uv run uvicorn app.main:app --reload
 ```
 
 `ffmpeg` and `ffprobe` must be on PATH.
@@ -94,19 +99,16 @@ on `/healthz`, free plan. Set `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` and
 `ALLOWED_ORIGINS` in the dashboard — the service key exists there and nowhere
 else, and never in a `VITE_` variable.
 
-**The image cannot build yet.** `pyproject.toml` pins the pipeline by commit SHA:
+The pipeline is vendored at `./whistle` rather than pinned as an external
+dependency, so **this repo's own commit is the pin**: a note-boundary change and
+the code that caused it land in the same commit. PLAN.md's
+`whistle @ git+github.com/DarkPitoune/whistle-pipeline@<sha>` is gone — that repo
+was never published, so neither the image nor `uv sync` could resolve it.
 
-```
-whistle-pipeline @ git+https://github.com/DarkPitoune/whistle-pipeline@d9e3ec5c…
-```
-
-`../../../whistle-pipeline` has no git remote, so that URL 404s. Push it public
-first. The pin is by SHA and not by branch on purpose: `pipeline_version` is
-product state, and an unpinned dependency would silently change the note
-boundaries new uploads get.
-
-The distribution name is `whistle-pipeline` (import name `whistle`).
-PLAN.md writes `whistle @ git+…`, which pip rejects as a metadata name mismatch.
+`pipeline_version` is still product state. Freezing segmentation at ingest is
+what protects it: never re-run the pipeline over an existing row, because the
+note count *is* the reveal curve and re-segmenting would silently change the
+difficulty of puzzles people have already played.
 
 ## Deferred
 

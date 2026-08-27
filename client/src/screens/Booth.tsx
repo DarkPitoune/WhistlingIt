@@ -104,8 +104,15 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
     try {
       await api.upload(draft);
       setSent(true);
-    } catch {
-      setError("Upload failed. Your take is still here — try again.");
+    } catch (e: unknown) {
+      // The API's 422 carries the quality gate's reasons, already turned into
+      // plain language by src/api/live.ts. That message is the only thing that
+      // tells a whistler what to do differently, so it must not be swallowed.
+      setError(
+        e instanceof Error && e.message
+          ? e.message
+          : "Upload failed. Your take is still here — try again.",
+      );
     } finally {
       setBusy(false);
     }

@@ -1,4 +1,5 @@
 import type { DailyClip, RoundResult, UploadDraft, UploadReceipt, WhistlingApi } from "./types";
+import { today } from "./day";
 import hedwig from "./fixtures/hedwig.json";
 
 /**
@@ -7,13 +8,6 @@ import hedwig from "./fixtures/hedwig.json";
  */
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-/** Local date as YYYY-MM-DD. Deliberately local, not UTC — see the timezone question. */
-export function today(): string {
-  const d = new Date();
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
 
 export const mockApi: WhistlingApi = {
   async getDaily() {

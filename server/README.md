@@ -10,7 +10,7 @@ The backend, in two pieces that never depend on each other.
         ┌──────────────────┐   ┌──────────────────────────┐
         │ Supabase         │◄──┤ Render: whistling-api    │
         │  postgres        │   │  FastAPI + ffmpeg        │
-        │  storage (audio) │   │  whistle-pipeline as lib │
+        │  storage (audio) │   │  ./whistle, vendored    │
         └──────────────────┘   └──────────────────────────┘
              ▲ public CDN URLs
              └── audio bytes straight to the player
@@ -21,6 +21,8 @@ The backend, in two pieces that never depend on each other.
 | `supabase/migrations/` | The schema. Two files, both applied to the linked project. |
 | `supabase/seed.sql` | Local dev only. Two songs, one with real audio behind it. |
 | `scripts/seed-audio.sh` | Puts that audio in the local bucket. Re-run after every `db reset`. |
+| `scripts/api-dev.sh` | Runs the ingest API against the local stack, CORS open to Vite. |
+| `scripts/pull-types.sh` | Regenerates `client/src/api/database.types.ts`. Run after every migration. |
 | `api/` | The ingest service. Docker, deployed to Render. |
 
 ## The one property worth protecting
@@ -100,12 +102,30 @@ remotely.
 supabase start
 supabase db reset             # migrations + seed
 ./scripts/seed-audio.sh       # audio into the bucket; storage.objects is reset too
+./scripts/api-dev.sh          # the booth's ingest API on :8000, if you need it
 supabase status               # the URL and anon key for client/.env.local
 ```
 
 Then in `client/`, put those two values in `.env.local` and `npm run dev`. The
 seed pins Hedwig's Theme as today's puzzle so a reset always lands on the row
 with real audio behind it.
+
+`cd ../client && npm run check:play-flow` walks a whole round against whatever
+the environment points at — the RPC, the app's own mapping and ladder, guess
+matching against the answers the server actually stored, and the audio bytes the
+player would decode. It is the fastest way to tell whether the play flow works
+without opening a browser.
+
+## Types
+
+```sh
+./scripts/pull-types.sh       # -> client/src/api/database.types.ts
+```
+
+The client can't read either table, so the generated types aren't there to build
+queries — they're there so `src/api/live.ts` can `Pick` its payload type out of
+the real columns. Rename `from_label` in a migration without regenerating and
+`tsc` fails; retype it by hand and nothing would have caught it.
 
 ## Deploying the schema
 
@@ -148,6 +168,7 @@ is the song pool, which is re-uploadable.
 | `reveal` carries `starts` too | So `get_daily()` never returns the full `notes` array; the client needs the boundaries and none of the f0/midi/confidence. |
 | `difficulty` + `avg_solve_note` are placeholders | The client contract requires both. Computing them needs a write per play, which is deferred — see below. |
 | No leading-article rule in `normalize()` | See `api/README.md`. |
+| Pipeline vendored, not pinned by SHA | `github.com/DarkPitoune/whistle-pipeline` was never published, so nothing could resolve it. It lives at `api/whistle` and this repo's commit is the pin. |
 
 ## Deferred, and where the slot is
 
@@ -157,10 +178,9 @@ is the song pool, which is re-uploadable.
 - **Uneven note currency** — the slot is `build_reveal()` in
   `api/app/reveal.py`, at ingest. Not in the pipeline, not in the client.
 - **Turnstile on the booth**, if it gets found and abused.
-- **Where a reveal starts.** `reveal.t0` is computed at ingest and shipped as
-  `DailyClip.startAt`, but nothing plays from it: `useClipPlayer(audioUrl,
-  unlocked)` runs 0 → unlocked with no start offset. On a recording with a
-  second of dead air, level 1 is mostly silence. Two ways out — thread `startAt`
-  through the player, or trim the head during transcode so `t0` is always ~0.
-  The second makes the client's play-from-0 model correct and needs no client
-  change; it also mutates the stored artifact, so it is a product call.
+**Settled since:** where a reveal starts. `reveal.t0` ships as
+`DailyClip.startAt` and `useClipPlayer(url, limit, start)` treats it as the
+playhead's floor, so a recording with dead air at the front no longer spends
+level 1 on silence. The alternative — trimming the head during transcode — was
+not taken: it mutates the stored artifact, and the client already had a natural
+place to put a floor.

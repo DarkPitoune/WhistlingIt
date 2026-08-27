@@ -9,7 +9,7 @@ import type { Round } from "../game/useRound";
 const STRIKE_MS = 520;
 
 export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
-  const player = useClipPlayer(clip.audioUrl, round.unlocked);
+  const player = useClipPlayer(clip.audioUrl, round.unlocked, clip.startAt ?? 0);
   const [value, setValue] = useState("");
   const [flash, setFlash] = useState<string | null>(null);
   const [locked, setLocked] = useState(false);
@@ -18,7 +18,8 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  // A new level means a new stretch of clip; start it from the top.
+  // A new level means a new stretch of clip; start it from the top. seek clamps
+  // to the clip's floor, so "the top" is the first note rather than second zero.
   useEffect(() => { player.seek(0); }, [round.level]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ticks = useMemo(

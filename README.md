@@ -4,22 +4,39 @@ A daily blind test where every clip is someone **whistling** the tune instead of
 One track per day for everyone. You start with three notes; every miss buys you one more, until the
 whole thing plays and the day is over.
 
-This repo holds the **interface design** and the **frontend**. No backend yet — the client talks to
-a mock adapter behind a typed contract.
+This repo holds the **interface design**, the **frontend** and the **backend**. The client reads the
+daily straight from Supabase; the booth posts to a small Python service that decides whether what
+you sent is really a whistle.
 
 ## What's here
 
 | Path | What it is |
 | --- | --- |
 | `index.html` | The interface design, as one self-contained page. Open it in a browser. |
-| `client/` | The real app. React + TypeScript + Vite. |
+| `client/` | The app. React + TypeScript + Vite. |
+| `server/supabase/` | The schema: two tables and one RPC. |
+| `server/api/` | The ingest service. FastAPI + ffmpeg + the note segmenter. |
 
 ## Running it
 
 ```sh
-cd client
-npm install
+cd client && npm install && npm run dev
+```
+
+With no `.env.local` that runs against fixtures, so a fresh clone works with nothing installed.
+For the real thing:
+
+```sh
+cd server
+supabase start
+supabase db reset               # schema + two seed songs
+./scripts/seed-audio.sh         # the reference clip into the storage bucket
+./scripts/api-dev.sh            # the booth's ingest API, on :8000
+
+cd ../client
+cp .env.example .env.local      # fill in from `supabase status`
 npm run dev
+npm run check:play-flow         # walks a whole round against whatever it's pointed at
 ```
 
 The design page needs no build step — open `index.html` directly.
@@ -44,15 +61,24 @@ client/
 
 ### The backend contract
 
-Everything the server needs to provide is in `src/api/types.ts`, and every call goes through the
-single `api` object in `src/api/index.ts`. To go live, write an adapter implementing `WhistlingApi`
-and export it there instead — nothing else in `src/` knows the difference.
+Everything the server provides is in `src/api/types.ts`, and every call goes through the single
+`api` object in `src/api/index.ts`. `src/api/live.ts` is the real adapter and `src/api/mock.ts` is
+the fixture one; the environment picks, and nothing else in `src/` knows the difference.
 
-| Call | What it does |
+| Call | Where it goes |
 | --- | --- |
-| `getDaily()` | Today's clip: audio URL, note boundaries, category, difficulty, average solve note, and the accepted answers. |
-| `submitRound(result)` | Fire-and-forget. Feeds the difficulty and average-solve numbers. |
-| `upload(draft)` | The booth's take plus its labels and detected note boundaries. |
+| `getDaily()` | One RPC to Supabase. Never touches the ingest API — see below. |
+| `submitRound(result)` | Nothing, for now. It would only feed difficulty and the average solve note, and both need a write per play. |
+| `upload(draft)` | Multipart POST to the ingest API, which transcodes, segments and gates it. |
+
+**The game never talks to the ingest API.** That service is a free-tier container that spins down
+when idle, so a cold start is tens of seconds — survivable for someone uploading a whistle, fatal
+for someone opening the game. Because the daily path is Pages → Supabase, the API can be asleep or
+broken all day and the game still works. Don't route player traffic through it.
+
+`src/api/database.types.ts` is generated from the live schema (`server/scripts/pull-types.sh`), and
+`live.ts` builds its payload type out of those columns — so renaming one in a migration breaks
+`tsc` instead of production.
 
 Guess matching is **client-side** (`src/game/match.ts`), so `accepted` ships to the browser and is
 readable in devtools. Deliberate trade for instant, offline-capable feedback — move it behind a
@@ -61,9 +87,22 @@ readable in devtools. Deliberate trade for instant, offline-capable feedback —
 ### The mock
 
 `src/api/mock.ts` serves one fixture for every day, with a little latency so loading states are
-real. The clip is a genuine audio file, not the design page's live synth: `npm run clip` renders
-the same synth (sine + 5.4 Hz vibrato + a bandpassed puff of breath on each attack) offline to
-`public/clips/hedwig.wav` and writes the matching fixture. Replace both with real whistlers.
+real, and it is what you get when `.env.local` is absent. The clip is a genuine audio file, not the
+design page's live synth: `npm run clip` renders the same synth (sine + 5.4 Hz vibrato + a
+bandpassed puff of breath on each attack) offline to `public/clips/hedwig.wav` and writes the
+matching fixture. That same file is what the seed and the ingest smoke test use, so the pipeline
+finds 14 notes in it — the same count the fixture claims.
+
+### Guess matching is shared with the server
+
+`normalise` in `src/game/match.ts` and `normalize()` in `server/api/app/normalize.py` must agree
+exactly, or a puzzle can ship with accepted answers no correct guess ever matches. Both are tested
+against one file, `server/api/tests/normalize_fixtures.json`:
+
+```sh
+npm run check:match                          # the JS half, plus the isRight cases
+cd ../server/api && .venv/bin/python -m pytest   # the Python half
+```
 
 ### Notes on the implementation
 
@@ -170,10 +209,11 @@ Still open. The app picks a default for each so it runs; none of them are decide
 | | Question | What the app does for now |
 | --- | --- | --- |
 | 1 | **Notes are an uneven currency.** Three notes is 1.86 s, but note 4 buys only 0.62 s more while note 7 buys 1.86 s. Should a level be "the next note *or* +1.5 s, whichever is longer"? | Pure note ladder, as designed. Changing it touches `makeLadder` in `client/src/game/levels.ts` and nothing else. |
-| 2 | **Timezone.** UTC midnight or local midnight? | Local. The countdown on the reveal matches. |
-| 3 | **Late arrivals.** Open the app at 23:50 — fresh round, or the tail of the day? | Fresh round; the day flips at local midnight. |
-| 4 | **Accounts.** | Device-local streak in `localStorage`, no accounts. |
-| 5 | **Booth access.** | Open, everything goes to a queue. No rejection state built. |
+| 2 | **Timezone.** UTC midnight or local midnight? | **UTC**, decided by the backend. `get_daily()` pins the date to `(now() at time zone 'utc')::date` and `src/api/day.ts` is the one place the client agrees with it. |
+| 3 | **Late arrivals.** Open the app at 23:50 — fresh round, or the tail of the day? | The tail of the day. One global puzzle rotating at UTC midnight, so 23:50 local is whatever UTC day it is. |
+| 4 | **Accounts.** | Device-local streak in `localStorage`, keyed on the UTC date so it agrees with the server. No accounts, no auth, no user data anywhere. |
+| 5 | **Booth access.** | Open, and **no queue**: uploads land in the pool live. The pipeline's quality gate is the only filter — it rejects with machine-readable reasons the booth renders as plain language. The backstop is a kill switch, not a review step. |
+| 6 | **Where a reveal starts.** A recording with dead air at the front would spend level 1 on silence. | Settled: the server reports the first note minus a 150 ms lead as `startAt`, and `useClipPlayer` treats it as the floor. |
 
 The original framing of each:
 

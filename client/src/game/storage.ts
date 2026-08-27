@@ -1,4 +1,5 @@
 import type { TryKind } from "../api";
+import { today } from "../api/day";
 
 /**
  * Everything here is device-local. Streaks imply identity, and we start without
@@ -44,7 +45,7 @@ export function loadStreak(): number {
   const s = read<StreakRecord>(STREAK_KEY);
   if (!s || !s.lastWon) return 0;
   // Shown as live only while it could still be extended: today or yesterday.
-  return daysBetween(s.lastWon, todayLocal()) <= 1 ? s.count : 0;
+  return daysBetween(s.lastWon, today()) <= 1 ? s.count : 0;
 }
 
 /** Bump on a win, reset on a miss. Called once, when the round ends. */
@@ -54,18 +55,12 @@ export function recordResult(won: boolean): number {
     write(STREAK_KEY, { count: 0, lastWon: s.lastWon });
     return 0;
   }
-  const today = todayLocal();
-  if (s.lastWon === today) return s.count;   // already counted this day
-  const carry = s.lastWon && daysBetween(s.lastWon, today) === 1 ? s.count : 0;
+  const day = today();
+  if (s.lastWon === day) return s.count;   // already counted this day
+  const carry = s.lastWon && daysBetween(s.lastWon, day) === 1 ? s.count : 0;
   const next = carry + 1;
-  write(STREAK_KEY, { count: next, lastWon: today });
+  write(STREAK_KEY, { count: next, lastWon: day });
   return next;
-}
-
-function todayLocal(): string {
-  const d = new Date();
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 function daysBetween(a: string, b: string): number {

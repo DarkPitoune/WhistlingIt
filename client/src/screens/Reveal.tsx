@@ -14,7 +14,7 @@ import type { Round } from "../game/useRound";
 export function Reveal({ clip, round }: { clip: DailyClip; round: Round }) {
   const won = round.done?.won ?? false;
   // The round is over, so the whole clip is unlocked.
-  const player = useClipPlayer(clip.audioUrl, clip.duration);
+  const player = useClipPlayer(clip.audioUrl, clip.duration, clip.startAt ?? 0);
   const [copied, setCopied] = useState(false);
   const countdown = useCountdown();
 

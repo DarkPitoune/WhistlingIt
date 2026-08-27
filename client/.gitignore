@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Vite loads these automatically; they hold per-machine values.
+.env.local
+.env.*.local
