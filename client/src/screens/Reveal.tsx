@@ -4,6 +4,7 @@ import { Bar } from "../components/Bar";
 import { Tape, tapeText } from "../components/Tape";
 import { PauseIcon, PlayIcon } from "../components/icons";
 import { useClipPlayer } from "../audio/useClipPlayer";
+import { tuneEnd } from "../game/levels";
 import type { Round } from "../game/useRound";
 
 /**
@@ -11,10 +12,17 @@ import type { Round } from "../game/useRound";
  * The answer is the hero — not the score — because "what *was* that?" is the question
  * everyone actually has.
  */
+/**
+ * Hardcoded, not `location.origin`: the point of the last line is to tell someone
+ * who has never played where to go, and a dev or preview origin pasted into a
+ * group chat sends them nowhere. Matches client/public/CNAME.
+ */
+const SHARE_URL = "https://whistling.it";
+
 export function Reveal({ clip, round }: { clip: DailyClip; round: Round }) {
   const won = round.done?.won ?? false;
   // The round is over, so the whole clip is unlocked.
-  const player = useClipPlayer(clip.audioUrl, clip.duration, clip.startAt ?? 0);
+  const player = useClipPlayer(clip.audioUrl, tuneEnd(clip), clip.startAt ?? 0);
   const [copied, setCopied] = useState(false);
   const countdown = useCountdown();
 
@@ -29,6 +37,7 @@ export function Reveal({ clip, round }: { clip: DailyClip; round: Round }) {
       `WhistlingIt ${clip.date.slice(8)}/${clip.date.slice(5, 7)}`,
       `${tapeText(round.tape, round.ladder.length, won)} ${verdict(won, round)}`,
       `🔥 ${round.streak}`,
+      SHARE_URL,
     ].join("\n");
     try { await navigator.clipboard.writeText(text); } catch { /* clipboard denied */ }
     setCopied(true);
@@ -52,7 +61,7 @@ export function Reveal({ clip, round }: { clip: DailyClip; round: Round }) {
         {player.playing ? <PauseIcon /> : <PlayIcon />}
         {player.playing ? "Playing the whole tune" : "Hear the whole tune"}
       </button>
-      <Bar duration={clip.duration} open={clip.duration} heard={player.pos} showKnob />
+      <Bar duration={tuneEnd(clip)} open={tuneEnd(clip)} heard={player.pos} showKnob />
 
       <button className="btn-share" onClick={share}>{copied ? "Copied ✓" : "Copy result"}</button>
       <p className="countdown">Next whistle in <b>{countdown}</b></p>

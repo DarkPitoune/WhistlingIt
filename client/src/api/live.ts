@@ -86,7 +86,10 @@ type DailyRow = Pick<
   avg_solve_note: number;
 };
 
-const CATEGORIES: readonly Category[] = ["Film", "Jingle", "TV", "Game", "Pop", "Classical"];
+// "Pop" and "Classical" were merged into "Music"; rows predating that still carry
+// the old values and fall through oneOf() to the default, which is fine — the tag
+// is decoration, not data anyone depends on.
+const CATEGORIES: readonly Category[] = ["Film", "Jingle", "TV", "Game", "Music"];
 const DIFFICULTIES: readonly Difficulty[] = ["Easy", "Fair", "Tricky", "Brutal"];
 
 /**
@@ -174,10 +177,9 @@ export const liveApi: WhistlingApi = {
     // stores both the raw and normalised forms.
     for (const a of draft.accepted) form.append("accepted_answers", a);
 
-    // draft.noteStarts / noteEnds are deliberately not sent. The booth's onset
-    // detector is a hint for the whistler ("14 notes found"); the server re-runs
-    // the pitch-plateau segmenter on the transcoded file and its answer is the
-    // one that becomes the puzzle. Sending ours would imply it could win.
+    // No note boundaries go up. The server re-runs the pitch-plateau segmenter on
+    // the transcoded file and its answer is the one that becomes the puzzle, so
+    // the booth no longer measures anything to send.
 
     const res = await fetch(`${INGEST_URL}/uploads`, { method: "POST", body: form });
 

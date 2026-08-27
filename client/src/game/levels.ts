@@ -18,8 +18,17 @@ export function makeLadder(noteCount: number): number[] {
 
 /** Seconds of the clip unlocked at a given rung — the end of the last unlocked note. */
 export function unlockedSeconds(clip: DailyClip, notes: number): number {
-  // The last rung is the whole file, tail included. Stopping at the final note's end
-  // would leave the ring-out hatched, so the bar could never fill.
-  if (notes >= clip.noteEnds.length) return clip.duration;
-  return clip.noteEnds[notes - 1] ?? clip.duration;
+  return clip.noteEnds[Math.min(notes, clip.noteEnds.length) - 1] ?? clip.duration;
+}
+
+/**
+ * Where the tune ends, which is not where the file ends.
+ *
+ * `duration` is the whole recording, trailing silence and ring-out included — on the
+ * reference clip that's 0.25s more than the last note. The bar is scaled to this
+ * instead, so the final rung fills it completely rather than leaving a sliver of
+ * hatching over dead air that no rung can ever buy.
+ */
+export function tuneEnd(clip: DailyClip): number {
+  return clip.noteEnds[clip.noteEnds.length - 1] ?? clip.duration;
 }

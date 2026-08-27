@@ -3,6 +3,7 @@ import type { DailyClip } from "../api";
 import { Bar } from "../components/Bar";
 import { GoIcon, PauseIcon, PlayIcon } from "../components/icons";
 import { useClipPlayer } from "../audio/useClipPlayer";
+import { tuneEnd } from "../game/levels";
 import type { Round } from "../game/useRound";
 
 /** How long the struck-through wrong guess sits there before the count flips over it. */
@@ -85,7 +86,7 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
       </div>
 
       <Bar
-        duration={clip.duration}
+        duration={tuneEnd(clip)}
         open={round.unlocked}
         heard={player.pos}
         ticks={ticks}

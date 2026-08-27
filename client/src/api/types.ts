@@ -6,7 +6,12 @@
  * swap it in src/api/index.ts. These types are the spec to build against.
  */
 
-export type Category = "Film" | "Jingle" | "TV" | "Game" | "Pop" | "Classical";
+/**
+ * Must stay in step with CATEGORIES in server/api/app/config.py, which is what
+ * actually validates an upload — the client sending a value the API doesn't know
+ * is a 400, not a fallback.
+ */
+export type Category = "Film" | "Jingle" | "TV" | "Game" | "Music";
 
 /** Computed from the first hundred plays, never entered by the whistler. */
 export type Difficulty = "Easy" | "Fair" | "Tricky" | "Brutal";
@@ -66,14 +71,19 @@ export interface RoundResult {
   tape: TryKind[];
 }
 
+/**
+ * What the booth sends: the recording and its labels, nothing measured.
+ *
+ * No note boundaries. The server segments the transcoded file itself and that
+ * result is what becomes the puzzle, so shipping a browser-side guess alongside
+ * it would only invite the two to disagree.
+ */
 export interface UploadDraft {
   audio: Blob;
   title: string;
   from: string;
   category: Category;
   accepted: string[];
-  noteStarts: number[];
-  noteEnds: number[];
 }
 
 export interface UploadReceipt {

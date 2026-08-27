@@ -547,6 +547,9 @@ button { font: inherit; color: inherit; }
   cursor: pointer;
   text-decoration: underline;
 }
+/* "Upload a file instead" and "Start over" — both about getting a take. */
+.rec-actions { display: flex; align-items: center; gap: 16px; }
+
 .rec-timer {
   font-family: var(--font-mono);
   font-size: 12px;

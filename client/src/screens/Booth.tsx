@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import type { Category, UploadDraft } from "../api";
 import { api } from "../api";
-import { Bar } from "../components/Bar";
+import { PauseIcon, PlayIcon } from "../components/icons";
 import { getContext } from "../audio/context";
-import { detectNotes, type Detection } from "../audio/onsets";
+import { useClipPlayer } from "../audio/useClipPlayer";
 
-const CATEGORIES: Category[] = ["Film", "Jingle", "TV", "Game", "Pop", "Classical"];
+const CATEGORIES: Category[] = ["Film", "Jingle", "TV", "Game", "Music"];
 
 interface Take {
   blob: Blob;
   duration: number;
-  detection: Detection;
+  /** Object URL for the blob, so the take can be played back before sending. */
+  url: string;
 }
 
 /**
@@ -34,7 +35,17 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
   const recorder = useRef<MediaRecorder | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
+  // Hear the take back before committing to it.
+  const player = useClipPlayer(take?.url ?? null, take?.duration ?? 0);
+
   useEffect(() => () => { recorder.current?.stream.getTracks().forEach((t) => t.stop()); }, []);
+
+  // Unmounting mid-draft would otherwise strand the last take's object URL.
+  // Keyed on nothing rather than on the URL: a cleanup that re-ran on change
+  // would revoke the take StrictMode is about to re-mount and play.
+  const liveUrl = useRef<string | null>(null);
+  liveUrl.current = take?.url ?? null;
+  useEffect(() => () => { if (liveUrl.current) URL.revokeObjectURL(liveUrl.current); }, []);
 
   useEffect(() => {
     if (!recording) return;
@@ -43,12 +54,30 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
     return () => clearInterval(id);
   }, [recording]);
 
-  /** Decode whatever we captured and report where the notes fell. */
+  /**
+   * Swap in a new take, releasing the previous object URL. Nothing else revokes
+   * them, so skipping this leaks a whole recording per retry.
+   */
+  const replaceTake = (next: Take | null) => {
+    setTake((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return next;
+    });
+  };
+
+  /**
+   * Decode once, only to learn how long it is and to prove it is readable audio.
+   *
+   * We deliberately do not segment it here. The server re-runs its own pitch
+   * segmenter on the transcoded file and that answer is the one that becomes the
+   * puzzle, so anything measured in the browser is decoration at best and a
+   * contradiction at worst.
+   */
   const ingest = async (blob: Blob) => {
     setError(null);
     try {
       const buffer = await getContext().decodeAudioData(await blob.arrayBuffer());
-      setTake({ blob, duration: buffer.duration, detection: detectNotes(buffer) });
+      replaceTake({ blob, duration: buffer.duration, url: URL.createObjectURL(blob) });
     } catch {
       setError("Couldn't read that audio. Try a wav, mp3, m4a or ogg file.");
     }
@@ -98,8 +127,6 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
       from: from.trim(),
       category,
       accepted: answers,
-      noteStarts: take.detection.starts,
-      noteEnds: take.detection.ends,
     };
     try {
       await api.upload(draft);
@@ -131,13 +158,10 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
     );
   }
 
-  const notes = take?.detection.starts.length ?? 0;
-
   return (
     <div className="booth">
       <div className="booth-head">
         <h3>New whistle</h3>
-        <span className="eyebrow">Draft</span>
       </div>
 
       <div className="rec">
@@ -154,9 +178,24 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
             <small>{take ? `${take.duration.toFixed(1)} seconds` : "10–30 seconds is plenty"}</small>
           </p>
         )}
-        <button className="rec-file" onClick={() => fileInput.current?.click()}>
-          Upload a file instead
-        </button>
+        {take && !recording && (
+          <button className="btn-replay" onClick={player.toggle} disabled={!player.ready}>
+            {player.playing ? <PauseIcon /> : <PlayIcon />}
+            {player.playing ? "Playing your take" : "Hear your take"}
+          </button>
+        )}
+
+        {/* Both of these are about getting a take, so they sit with the recorder. */}
+        <div className="rec-actions">
+          <button className="rec-file" onClick={() => fileInput.current?.click()}>
+            Upload a file instead
+          </button>
+          {take && !recording && (
+            <button className="rec-file" onClick={() => replaceTake(null)}>
+              Record another audio
+            </button>
+          )}
+        </div>
         <input
           ref={fileInput}
           type="file"
@@ -174,30 +213,6 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
 
       {take && (
         <>
-          {/* Detection reports, it doesn't ask. Same bar as the game, so a bad cut
-              shows up in one glance. */}
-          <div className="found">
-            <div className="found-top">
-              <strong>{notes} {notes === 1 ? "note" : "notes"} found</strong>
-              <span className={`badge-ok${take.detection.confidence === "Rough" ? " low" : ""}`}>
-                {take.detection.confidence}
-              </span>
-            </div>
-            <Bar
-              duration={take.duration}
-              open={take.duration}
-              ticks={take.detection.starts}
-            />
-            <div className="found-foot">
-              <small>
-                {notes >= 4
-                  ? `Levels at ${[3, 4, 5, 6, 7].filter((n) => n < notes).join(" · ")} · all`
-                  : "Needs at least four notes to make a round"}
-              </small>
-              <button type="button" onClick={() => setTake(null)}>Redo</button>
-            </div>
-          </div>
-
           <div className="field">
             <label htmlFor="upTitle">Title</label>
             <input id="upTitle" type="text" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -253,10 +268,13 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
             <p className="hint">Guessing is free text, so this list is the matching logic.</p>
           </div>
 
+          {/* No note-count gate here any more: the server's segmenter is the only
+              one whose count matters, and it rejects a short take with
+              `too_few_notes`, which live.ts turns into a sentence. */}
           <button
             className="booth-submit"
             type="button"
-            disabled={busy || !title.trim() || notes < 4}
+            disabled={busy || !title.trim()}
             onClick={submit}
           >
             {busy ? "Sending…" : "Send to the queue"}
