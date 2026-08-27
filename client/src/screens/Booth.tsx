@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Category, UploadDraft } from "../api";
 import { api } from "../api";
 import { PauseIcon, PlayIcon } from "../components/icons";
-import { getContext } from "../audio/context";
+import { getContext, setAudioSession } from "../audio/context";
 import { useClipPlayer } from "../audio/useClipPlayer";
 
 const CATEGORIES: Category[] = ["Film", "Jingle", "TV", "Game", "Music"];
@@ -86,6 +86,9 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
   const startRecording = async () => {
     setError(null);
     try {
+      // Playing the daily leaves iOS in the `playback` session, which is the wrong
+      // one to capture under. Declare the mic before asking for it.
+      setAudioSession("play-and-record");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const rec = new MediaRecorder(stream);
       const chunks: Blob[] = [];

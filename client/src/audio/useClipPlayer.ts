@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getContext, loadClip } from "./context";
+import { loadClip, setAudioSession, unlock } from "./context";
 
 /** Short ramps so cutting the clip mid-note doesn't click. */
 const FADE_IN = 0.008;
@@ -12,7 +12,8 @@ export interface ClipPlayer {
   playing: boolean;
   /** Playhead in seconds. Updates on every frame while playing. */
   pos: number;
-  play: () => void;
+  /** Resolves once the clip is actually rolling — it waits for the context to resume. */
+  play: () => Promise<void>;
   pause: () => void;
   toggle: () => void;
   seek: (t: number) => void;
@@ -51,6 +52,12 @@ export function useClipPlayer(url: string | null, limit: number, start = 0): Cli
   const nodes = useRef<{ src: AudioBufferSourceNode; gain: GainNode } | null>(null);
   const anchor = useRef({ ctxTime: 0, offset: 0 });
   const raf = useRef(0);
+  /**
+   * Bumped by every teardown. `play` has to wait for the audio context to resume,
+   * so it gives up the gesture and can come back to find that a pause, a new level
+   * or an unmount happened in the meantime. Only the newest attempt may schedule.
+   */
+  const gen = useRef(0);
 
   // ── load ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -70,6 +77,7 @@ export function useClipPlayer(url: string | null, limit: number, start = 0): Cli
   }, [url]);
 
   const teardown = useCallback(() => {
+    gen.current++;
     cancelAnimationFrame(raf.current);
     const n = nodes.current;
     nodes.current = null;
@@ -85,11 +93,14 @@ export function useClipPlayer(url: string | null, limit: number, start = 0): Cli
     setPlaying(false);
   }, [teardown]);
 
-  const play = useCallback(() => {
+  const play = useCallback(async () => {
     if (!buffer) return;
     teardown();
+    const mine = gen.current;
 
-    const ctx = getContext();
+    // Everything that decides whether to play at all is settled before the await,
+    // so a refusal stays synchronous and never has to undo `playing`.
+    //
     // Reaching the end of the unlocked stretch and pressing play again restarts it —
     // from the first note, not from the top of the file.
     const floor = startRef.current;
@@ -97,6 +108,24 @@ export function useClipPlayer(url: string | null, limit: number, start = 0): Cli
     const from = spent || posRef.current < floor ? floor : posRef.current;
     const span = limitRef.current - from;
     if (span <= 0.01) return;
+
+    // Optimistic, because the first resume of a session is not instant and a play
+    // button that ignores the first tap reads as broken. Every path that can make
+    // us bail below either sets `playing` false itself (pause, the level-change
+    // effect, a natural finish) or is a second `play` that sets it true again.
+    setPlaying(true);
+
+    // Both of these are iOS, and both have to be settled before `at` is computed.
+    // A Web-Audio-only page sits in the `ambient` session, which the ringer switch
+    // mutes; and a context that hasn't finished resuming has a frozen clock, so
+    // scheduling against it starts nothing at all. `unlock` fires resume() inside
+    // this gesture and hands back the wait.
+    setAudioSession("playback");
+    const ctx = await unlock();
+
+    // The await outlived the gesture: a pause, a level unlock or an unmount may
+    // have landed while we waited, and each of those bumped the generation.
+    if (gen.current !== mine) return;
 
     const src = ctx.createBufferSource();
     src.buffer = buffer;
@@ -113,7 +142,6 @@ export function useClipPlayer(url: string | null, limit: number, start = 0): Cli
 
     anchor.current = { ctxTime: at, offset: from };
     nodes.current = { src, gain };
-    setPlaying(true);
 
     src.onended = () => {
       // Fires for a natural finish and for our own stop(); teardown clears the
@@ -140,7 +168,7 @@ export function useClipPlayer(url: string | null, limit: number, start = 0): Cli
     setPos(clamped);
   }, []);
 
-  const toggle = useCallback(() => { playing ? pause() : play(); }, [playing, pause, play]);
+  const toggle = useCallback(() => { if (playing) pause(); else void play(); }, [playing, pause, play]);
 
   // A level unlocking mid-playback would leave the source node scheduled against the
   // old, shorter span. Stop rather than silently truncate.
