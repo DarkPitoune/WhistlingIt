@@ -79,8 +79,11 @@ export function Reveal({ clip, round }: { clip: DailyClip; round: Round }) {
 
       <Tape tape={round.tape} rungs={round.ladder.length} won={won} />
       <p className="res-line">
-        <b>{won ? "got it on" : ""} {verdict(won, round)}</b> · most got it on{" "}
-        {notesAtLevel(round.ladder, clip.avgSolveLevel)}
+        <b>{won ? "got it on" : ""} {verdict(won, round)}</b>
+        {/* Dropped when nobody has solved it: the payload's average is a fallback
+            at that point, and "most got it on 2" with no solvers is a fiction.
+            The player's own solve is not in these counts yet either. */}
+        {clip.solvedCount > 0 && <> · most got it on {notesAtLevel(round.ladder, clip.avgSolveLevel)}</>}
       </p>
       {/* Its own line rather than a third clause: the one above is already two
           facts wide, and this one is about everybody else. */}

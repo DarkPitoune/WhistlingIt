@@ -1,19 +1,43 @@
 import type { DailyClip } from "../api";
 
+/** The reveal curve: one note, then two, three, five, eight — then the lot. */
+const FIB_RUNGS = [1, 2, 3, 5, 8];
+
+/** Six rungs whenever there is room for six distinct note counts. */
+const RUNGS = 6;
+
 /**
- * The ladder: three notes, then one more per miss, then the whole tune.
+ * How much of the tune each miss buys.
  *
- * Derived from the clip's note count rather than hardcoded to 14, and clamped so a
- * short clip doesn't offer levels it can't fill.
+ * Fibonacci rather than one-note-at-a-time: the gaps widen as you go, so an early
+ * miss costs little and a late one hands over a lot. It also front-loads the
+ * tension — one note is almost nothing to go on.
  *
- * Open question, unresolved: notes are an uneven currency. On the Hedwig clip, three
- * notes is 1.86s but note 4 buys only 0.62s more while note 7 buys 1.86s. If we
- * decide a level should be "the next note or +1.5s, whichever is longer", it changes
- * here and nowhere else.
+ * Below nine notes the Fibonacci rungs run out before six levels do, so the gaps
+ * are padded with the largest note counts still free. Filling from the top is
+ * deliberate: it keeps the opening as stingy as the sequence intends, where
+ * filling from the bottom would hand over four notes before five and make the
+ * early game generous. A tune with fewer than six notes simply has fewer levels —
+ * there are not six distinct counts to offer.
+ *
+ * `level_count()` in SQL mirrors the *length* of this, as `least(6, n_notes)`.
+ * That identity is what the two agreeing depends on, so any change here has to
+ * keep it true or the server will reject scores the client can reach.
  */
 export function makeLadder(noteCount: number): number[] {
-  const steps = [3, 4, 5, 6, 7].filter((n) => n < noteCount);
-  return [...steps, noteCount];
+  const n = Math.max(0, Math.trunc(noteCount));
+  if (n <= 0) return [];
+
+  const rungs = FIB_RUNGS.filter((x) => x < n);
+  const used = new Set(rungs);
+  for (let candidate = n - 1; rungs.length < RUNGS - 1 && candidate >= 1; candidate--) {
+    if (!used.has(candidate)) {
+      rungs.push(candidate);
+      used.add(candidate);
+    }
+  }
+  rungs.sort((a, b) => a - b);
+  return [...rungs, n];
 }
 
 /** Seconds of the clip unlocked at a given rung — the end of the last unlocked note. */

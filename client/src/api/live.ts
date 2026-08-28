@@ -2,7 +2,6 @@ import type { Database } from "./database.types";
 import type {
   Category,
   DailyClip,
-  Difficulty,
   RoundResult,
   UploadDraft,
   UploadReceipt,
@@ -82,7 +81,6 @@ type DailyRow = Pick<
 > & {
   date: string;
   reveal: RevealLadder;
-  difficulty: string;
   avg_solve_level: number;
   solved_count: number;
   failed_count: number;
@@ -103,7 +101,6 @@ const LEGACY_CATEGORIES: Readonly<Record<string, Category>> = {
   Pop: "Music",
   Classical: "Music",
 };
-const DIFFICULTIES: readonly Difficulty[] = ["Easy", "Fair", "Tricky", "Brutal"];
 
 /**
  * `category` and `difficulty` are plain `text` in Postgres — the allowed values
@@ -129,7 +126,6 @@ export function toClip(row: DailyRow): DailyClip {
     // only shows on a real recording with dead air at the front.
     startAt: row.reveal?.t0 ?? 0,
     category: oneOf(CATEGORIES, LEGACY_CATEGORIES[row.category ?? ""] ?? row.category, "Film"),
-    difficulty: oneOf(DIFFICULTIES, row.difficulty, "Fair"),
     // Floored at 1 only. The upper bound is the ladder's length, which is built
     // from the note count in game/levels.ts — clamping properly belongs where the
     // ladder is known, so `notesAtLevel` does it.

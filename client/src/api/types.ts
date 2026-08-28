@@ -13,8 +13,18 @@
  */
 export type Category = "Film" | "Jingle" | "TV Series" | "Video Games" | "Music";
 
-/** Computed from the first hundred plays, never entered by the whistler. */
-export type Difficulty = "Easy" | "Fair" | "Tricky" | "Brutal";
+/**
+ * Six steps, derived from how far the average solver had to go — never entered by
+ * the whistler and no longer sent by the server. The labels live in
+ * src/game/difficulty.ts, which is also the only thing that orders them.
+ */
+export type Difficulty =
+  | "Trivial"
+  | "A Breeze"
+  | "Gust"
+  | "Storm"
+  | "Gasping for Air"
+  | "Hurricane";
 
 /**
  * The clip of the day.
@@ -50,7 +60,6 @@ export interface DailyClip {
    */
   startAt?: number;
   category: Category;
-  difficulty: Difficulty;
   /**
    * The average ladder rung solvers reached, 1-based — level 1 is three notes,
    * level 2 four, up to the last level which is the whole tune.
@@ -60,7 +69,10 @@ export interface DailyClip {
    * finishing at "all" would drag the mean to note 9, which is not a level
    * anybody was offered. Scoring the rung keeps every gap at one.
    *
-   * Use `notesAtLevel(round.ladder, …)` to turn it back into notes for display.
+   * Use `notesAtLevel(round.ladder, …)` to turn it back into notes for display,
+   * and `difficultyFor(round.ladder, …)` for the label — difficulty is this
+   * number wearing an adjective, not a separate fact.
+   *
    * Measured from `solvedCount` plays; falls back to level 2 until someone solves.
    */
   avgSolveLevel: number;

@@ -145,7 +145,6 @@ const fixture = {
   noteStarts: start.map(round),
   noteEnds: end.map(round),
   category: "Film",
-  difficulty: "Tricky",
   avgSolveLevel: 2,
   // Plausible crowd figures, so the fixture exercises the percentage branch of
   // solveRate() rather than only the "nobody has played" one.

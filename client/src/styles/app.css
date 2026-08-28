@@ -258,7 +258,16 @@ button { font: inherit; color: inherit; }
   line-height: 1;
 }
 .tag-chip--cat { background: var(--indigo); border-color: var(--indigo); color: var(--on-indigo); }
+/* Coloured by position on the scale, so the pill says "hard" before it is read.
+   Only the fill changes: text and border are both --ink, which is what makes the
+   ramp legible in one glance and is why each fill is contrast-solved against it. */
 .tag-chip--diff { background: transparent; color: var(--ink); }
+.tag-chip--diff[data-step="1"] { background: var(--diff-1); }
+.tag-chip--diff[data-step="2"] { background: var(--diff-2); }
+.tag-chip--diff[data-step="3"] { background: var(--diff-3); }
+.tag-chip--diff[data-step="4"] { background: var(--diff-4); }
+.tag-chip--diff[data-step="5"] { background: var(--diff-5); }
+.tag-chip--diff[data-step="6"] { background: var(--diff-6); }
 
 .big {
   font-family: var(--font-display);

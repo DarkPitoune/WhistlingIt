@@ -22,6 +22,22 @@
   --glow: rgba(255, 78, 23, .16);
   --hatch: rgba(43, 58, 245, .18);
 
+  /* Difficulty ramp, easiest to hardest. Its own scale rather than reuse of
+     --good/--blaze: those two carry fixed meanings elsewhere (solved, and the one
+     loud thing on screen), and a six-step gradient needs to read as a gradient.
+
+     The pill's text and border are both --ink, so every fill has to clear 4.5:1
+     against it — which is why the two themes are not tints of each other. Light
+     ink needs pale fills; near-white ink needs deep ones. Each value was solved
+     for a target contrast rather than picked, and the worst pairing across both
+     themes measures 4.99:1. Re-check with the same method before nudging any. */
+  --diff-1: #58CE89;
+  --diff-2: #82CB4D;
+  --diff-3: #DFC93A;
+  --diff-4: #EA8C2E;
+  --diff-5: #E96F51;
+  --diff-6: #E45A5A;
+
   --font-display: "Unbounded", "Familjen Grotesk", system-ui, sans-serif;
   --font-body: "Familjen Grotesk", "Helvetica Neue", Helvetica, sans-serif;
   --font-mono: "Martian Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -38,6 +54,10 @@
     --butter: #FFD25E; --butter-ink: #2A1D00;
     --good: #22C79A; --on-good: #04241B;
     --shadow: rgba(0, 0, 0, .55); --glow: rgba(255, 107, 61, .20); --hatch: rgba(115, 133, 255, .22);
+
+    /* Deep fills, because --ink is near-white here. Same targets, mirrored. */
+    --diff-1: #217142; --diff-2: #3B641D; --diff-3: #5D520F;
+    --diff-4: #713E0B; --diff-5: #7E2610; --diff-6: #7D1414;
   }
 }
 
@@ -49,4 +69,8 @@
   --butter: #FFD25E; --butter-ink: #2A1D00;
   --good: #22C79A; --on-good: #04241B;
   --shadow: rgba(0, 0, 0, .55); --glow: rgba(255, 107, 61, .20); --hatch: rgba(115, 133, 255, .22);
+
+    /* Deep fills, because --ink is near-white here. Same targets, mirrored. */
+    --diff-1: #217142; --diff-2: #3B641D; --diff-3: #5D520F;
+    --diff-4: #713E0B; --diff-5: #7E2610; --diff-6: #7D1414;
 }

@@ -4,6 +4,7 @@ import { Bar } from "../components/Bar";
 import { GoIcon, PauseIcon, PlayIcon } from "../components/icons";
 import { useClipPlayer } from "../audio/useClipPlayer";
 import { useSpaceToggle } from "../audio/useSpaceToggle";
+import { difficultyFor, difficultyStep } from "../game/difficulty";
 import { notesAtLevel, tuneEnd } from "../game/levels";
 import { solveRate, whistlerCredit } from "../game/stats";
 import type { Round } from "../game/useRound";
@@ -33,10 +34,19 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
       .filter((t): t is number => t !== undefined),
     [round.ladder, clip.noteStarts],
   );
+  /*
+   * Par and difficulty are both `solve_level_sum / solved_count`, so with nobody
+   * solved they are not measurements — the payload falls back to level 2 and the
+   * screen would present an invented average as a fact. Gated on solvers rather
+   * than on plays: a day where three people tried and all failed still has no
+   * average to show.
+   */
+  const measured = clip.solvedCount > 0;
+
   // The crowd marker sits at the end of the average rung's stretch, so it always
   // lands on a boundary a player could actually have stopped at.
   const parNotes = notesAtLevel(round.ladder, clip.avgSolveLevel);
-  const parTs = clip.noteEnds[parNotes - 1];
+  const parTs = measured ? clip.noteEnds[parNotes - 1] : undefined;
   const rate = solveRate(clip);
 
   const misses = pending ? [...round.wrongGuesses, pending] : round.wrongGuesses;
@@ -104,7 +114,14 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
           rather than up by the count, so it reads as a hint while you type. */}
       <div className="tags">
         <span className="tag-chip tag-chip--cat">{clip.category}</span>
-        <span className="tag-chip tag-chip--diff">{clip.difficulty}</span>
+        {measured && (
+          <span
+            className="tag-chip tag-chip--diff"
+            data-step={difficultyStep(round.ladder, clip.avgSolveLevel)}
+          >
+            Difficulty: {difficultyFor(round.ladder, clip.avgSolveLevel)}
+          </span>
+        )}
       </div>
 
       {/* Credit before the tune is guessed: the whistler is not the answer. */}

@@ -16,6 +16,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
+import { difficultyFor } from "../src/game/difficulty.ts";
 import { makeLadder, notesAtLevel, unlockedSeconds } from "../src/game/levels.ts";
 import { isRight } from "../src/game/match.ts";
 
@@ -71,7 +72,8 @@ if (row === null) {
 
 // ── 2. the app's own mapping ──────────────────────────────────────────────────
 const clip = toClip(row);
-console.log(`\n${clip.title} — ${clip.from || "(no from line)"}  [${clip.category} · ${clip.difficulty}]`);
+const _ladder = makeLadder(clip.noteStarts.length);
+console.log(`\n${clip.title} — ${clip.from || "(no from line)"}  [${clip.category} · ${difficultyFor(_ladder, clip.avgSolveLevel)}]`);
 console.log(`${clip.noteStarts.length} notes, ${clip.duration}s, starts at ${clip.startAt}s\n`);
 
 ok(clip.noteStarts.length > 0, "note boundaries present");
