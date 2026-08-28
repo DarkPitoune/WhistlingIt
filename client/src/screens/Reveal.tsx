@@ -6,7 +6,8 @@ import { Tape, tapeText } from "../components/Tape";
 import { PauseIcon, PlayIcon } from "../components/icons";
 import { useClipPlayer } from "../audio/useClipPlayer";
 import { useSpaceToggle } from "../audio/useSpaceToggle";
-import { tuneEnd } from "../game/levels";
+import { notesAtLevel, tuneEnd } from "../game/levels";
+import { solveRate, whistlerCredit } from "../game/stats";
 import type { Round } from "../game/useRound";
 
 /**
@@ -28,6 +29,25 @@ export function Reveal({ clip, round }: { clip: DailyClip; round: Round }) {
   useSpaceToggle(player.toggle, player.ready);
   const [copied, setCopied] = useState(false);
   const countdown = useCountdown();
+
+  /*
+   * The clip was fetched before the round began, so its counts are one short:
+   * they don't include the result the player just posted. Add it here rather than
+   * refetching — the round trip would leave the number visibly wrong for a beat,
+   * and this is the one result we already know.
+   *
+   * Guarded by `justFinished`, which is false when the round was restored from
+   * storage. By then the server's counts already contain this player, and adding
+   * again would count them twice.
+   *
+   * If the write was declined the tally is one optimistic, and corrects itself on
+   * the next load. Worth it: "1 of 1" on a screen you just finished reads broken.
+   */
+  const rate = solveRate({
+    ...clip,
+    solvedCount: clip.solvedCount + (round.justFinished && won ? 1 : 0),
+    failedCount: clip.failedCount + (round.justFinished && !won ? 1 : 0),
+  });
 
   useEffect(() => {
     if (!copied) return;
@@ -52,12 +72,19 @@ export function Reveal({ clip, round }: { clip: DailyClip; round: Round }) {
         <span className="res-kicker">{won ? "Solved" : "Out of notes"}</span>
         <h2 className="res-title">{clip.title}</h2>
         <p className="res-from">{clip.from}</p>
+        {/* Distinct from `from`, which is where the tune comes from — this is who
+            whistled it. */}
+        <p className="res-by">{whistlerCredit(clip)}</p>
       </div>
 
       <Tape tape={round.tape} rungs={round.ladder.length} won={won} />
       <p className="res-line">
-        <b>{won ? "got it on" : ""} {verdict(won, round)}</b> · most got it on {clip.avgSolveNote}
+        <b>{won ? "got it on" : ""} {verdict(won, round)}</b> · most got it on{" "}
+        {notesAtLevel(round.ladder, clip.avgSolveLevel)}
       </p>
+      {/* Its own line rather than a third clause: the one above is already two
+          facts wide, and this one is about everybody else. */}
+      {rate && <p className="solve-rate">{rate}</p>}
 
       {/* Now that the day is done, the whole tune is listenable. */}
       <button className="btn-replay" onClick={player.toggle} disabled={!player.ready}>

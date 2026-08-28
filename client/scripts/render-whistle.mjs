@@ -146,7 +146,12 @@ const fixture = {
   noteEnds: end.map(round),
   category: "Film",
   difficulty: "Tricky",
-  avgSolveNote: 4,
+  avgSolveLevel: 2,
+  // Plausible crowd figures, so the fixture exercises the percentage branch of
+  // solveRate() rather than only the "nobody has played" one.
+  solvedCount: 37,
+  failedCount: 23,
+  signature: "Téo",
   title: "Hedwig's Theme",
   from: "Harry Potter · John Williams",
   accepted: ["harry potter", "hedwig", "hedwigs theme", "poudlard", "hp"],

@@ -4,7 +4,8 @@ import { Bar } from "../components/Bar";
 import { GoIcon, PauseIcon, PlayIcon } from "../components/icons";
 import { useClipPlayer } from "../audio/useClipPlayer";
 import { useSpaceToggle } from "../audio/useSpaceToggle";
-import { tuneEnd } from "../game/levels";
+import { notesAtLevel, tuneEnd } from "../game/levels";
+import { solveRate, whistlerCredit } from "../game/stats";
 import type { Round } from "../game/useRound";
 
 /** How long the struck-through wrong guess sits there before the count flips over it. */
@@ -32,7 +33,11 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
       .filter((t): t is number => t !== undefined),
     [round.ladder, clip.noteStarts],
   );
-  const parTs = clip.noteEnds[clip.avgSolveNote - 1];
+  // The crowd marker sits at the end of the average rung's stretch, so it always
+  // lands on a boundary a player could actually have stopped at.
+  const parNotes = notesAtLevel(round.ladder, clip.avgSolveLevel);
+  const parTs = clip.noteEnds[parNotes - 1];
+  const rate = solveRate(clip);
 
   const misses = pending ? [...round.wrongGuesses, pending] : round.wrongGuesses;
 
@@ -90,7 +95,7 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
         open={round.unlocked}
         heard={player.pos}
         ticks={ticks}
-        {...(parTs !== undefined ? { parTs, par: clip.avgSolveNote } : {})}
+        {...(parTs !== undefined ? { parTs, par: parNotes } : {})}
         onSeek={(t) => { player.pause(); player.seek(t); }}
         showKnob
       />
@@ -101,6 +106,15 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
         <span className="tag-chip tag-chip--cat">{clip.category}</span>
         <span className="tag-chip tag-chip--diff">{clip.difficulty}</span>
       </div>
+
+      {/* Credit before the tune is guessed: the whistler is not the answer. */}
+      <p className="credit">{whistlerCredit(clip)}</p>
+
+      {/* An invitation rather than a zero when the day is untouched: "0 of 0
+          players have found it" reads as "this one is impossible". */}
+      <p className={`solve-rate${rate ? "" : " solve-rate--invite"}`}>
+        {rate ?? "Be the first to find today's tune!"}
+      </p>
 
       <div className="guess-field">
         <input

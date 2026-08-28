@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
-import type { DailyClip } from "./api";
+import { useCallback, useEffect, useState } from "react";
+import type { DailyClip, UploadDraft } from "./api";
 import { api } from "./api";
 import { FlameIcon } from "./components/icons";
+import { Toasts, useToasts } from "./components/Toasts";
 import { useRound } from "./game/useRound";
 import { Daily } from "./screens/Daily";
 import { Reveal } from "./screens/Reveal";
@@ -19,6 +20,29 @@ const routeOf = (path: string): Route => (path === "/booth" ? "booth" : "daily")
 
 export default function App() {
   const [route, setRoute] = useState<Route>(() => routeOf(location.pathname));
+  const { toasts, push, dismiss } = useToasts();
+
+  /*
+   * Fire an upload and report on it later.
+   *
+   * Owned here rather than in the booth because the booth stops waiting the
+   * moment it submits: it shows "sent, processing" and offers to leave. The
+   * request outlives that screen — a cold ingest container takes tens of seconds
+   * — so the thing that reports the outcome has to sit above the router.
+   *
+   * The failure toast matters more than the success one. The quality gate rejects
+   * takes with reasons a whistler can act on ("that doesn't sound like a whistle"),
+   * and before this the booth showed them inline. Now that submitting navigates
+   * away from the form, a toast is the only place that feedback can land.
+   */
+  const startUpload = useCallback((draft: UploadDraft) => {
+    api.upload(draft).then(
+      () => push("good", `“${draft.title}” has been processed.`),
+      (e: unknown) => push("bad", e instanceof Error && e.message
+        ? `“${draft.title}” — ${e.message}`
+        : `“${draft.title}” couldn't be processed.`),
+    );
+  }, [push]);
 
   useEffect(() => {
     const onPop = () => setRoute(routeOf(location.pathname));
@@ -31,21 +55,26 @@ export default function App() {
     setRoute(next);
   };
 
-  return route === "booth"
-    ? (
-      <div className="shell">
-        <Header
-          onHome={() => go("daily")}
-          right={
-            <button className="top-link" onClick={() => go("daily")}>
-              Back to the daily
-            </button>
-          }
-        />
-        <Booth onLeave={() => go("daily")} />
-      </div>
-    )
-    : <DailyRoute onBooth={() => go("booth")} />;
+  return (
+    <>
+      <Toasts toasts={toasts} onDismiss={dismiss} />
+      {route === "booth" ? (
+        <div className="shell">
+          <Header
+            onHome={() => go("daily")}
+            right={
+              <button className="top-link" onClick={() => go("daily")}>
+                Back to the daily
+              </button>
+            }
+          />
+          <Booth onLeave={() => go("daily")} onSubmit={startUpload} />
+        </div>
+      ) : (
+        <DailyRoute onBooth={() => go("booth")} />
+      )}
+    </>
+  );
 }
 
 function Header({ onHome, right }: { onHome: () => void; right?: React.ReactNode }) {

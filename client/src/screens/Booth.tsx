@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import type { Category, UploadDraft } from "../api";
-import { api } from "../api";
 import { PauseIcon, PlayIcon } from "../components/icons";
 import { getContext, setAudioSession } from "../audio/context";
 import { useClipPlayer } from "../audio/useClipPlayer";
@@ -18,12 +17,18 @@ interface Take {
  * Record first, label after. No title field, no category, no consent box in the way
  * — reversing that order kills contributions.
  */
-export function Booth({ onLeave }: { onLeave: () => void }) {
+export function Booth({
+  onLeave,
+  onSubmit,
+}: {
+  onLeave: () => void;
+  /** Fires the upload. Returns nothing: the outcome arrives as a toast. */
+  onSubmit: (draft: UploadDraft) => void;
+}) {
   const [take, setTake] = useState<Take | null>(null);
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
 
   const [title, setTitle] = useState("");
@@ -31,6 +36,7 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
   const [category, setCategory] = useState<Category>("Film");
   const [accepted, setAccepted] = useState<string[]>([]);
   const [aliasDraft, setAliasDraft] = useState("");
+  const [signature, setSignature] = useState("");
 
   const recorder = useRef<MediaRecorder | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -130,43 +136,61 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
     setAliasDraft("");
   };
 
-  const submit = async () => {
+  /**
+   * Hand the upload off and acknowledge immediately, without waiting.
+   *
+   * The ingest service transcodes, segments and gates the take, and it is a
+   * free-tier container that spins down when idle — a cold start is tens of
+   * seconds. Holding the whistler on a spinner for that is the wrong trade when
+   * nothing they do next depends on the answer. App reports the outcome as a
+   * toast, which is why it survives leaving this screen.
+   */
+  const submit = () => {
+    // Re-checked rather than leaning on `canSubmit`, which is a boolean and so
+    // cannot narrow `take` away from null for the compiler.
     if (!take || !title.trim()) return;
-    setBusy(true);
     // The title always counts as an accepted answer; the list is the matching logic.
-    const answers = [title.trim(), ...accepted];
-    const draft: UploadDraft = {
+    onSubmit({
       audio: take.blob,
       title: title.trim(),
       from: from.trim(),
       category,
-      accepted: answers,
-    };
-    try {
-      await api.upload(draft);
-      setSent(true);
-    } catch (e: unknown) {
-      // The API's 422 carries the quality gate's reasons, already turned into
-      // plain language by src/api/live.ts. That message is the only thing that
-      // tells a whistler what to do differently, so it must not be swallowed.
-      setError(
-        e instanceof Error && e.message
-          ? e.message
-          : "Upload failed. Your take is still here — try again.",
-      );
-    } finally {
-      setBusy(false);
-    }
+      accepted: [title.trim(), ...accepted],
+      signature: signature.trim(),
+    });
+    setSent(true);
+  };
+
+  /** Only a take and a title. An unsigned whistle is credited to nobody. */
+  const canSubmit = !!take && !!title.trim();
+
+  /** Back to an empty booth, keeping nothing from the take just sent. */
+  const startAnother = () => {
+    replaceTake(null);
+    setTitle("");
+    setFrom("");
+    setCategory("Film");
+    setAccepted([]);
+    setAliasDraft("");
+    setSignature("");
+    setError(null);
+    setSent(false);
   };
 
   if (sent) {
     return (
       <div className="booth">
         <div className="booth-done">
-          <span className="res-kicker">In the queue</span>
+          <span className="res-kicker">Sent</span>
           <h2 className="res-title">{title}</h2>
-          <p className="res-from">We'll listen and slot it into a day.</p>
+          <p className="res-from">
+            We're processing it now — listening for the notes and checking it's a whistle.
+            You'll get a notice when it's done!
+          </p>
         </div>
+        <button className="booth-submit" type="button" onClick={startAnother}>
+          Whistle another one
+        </button>
         <button className="btn-skip" onClick={onLeave}>Back to the daily</button>
       </div>
     );
@@ -290,21 +314,31 @@ export function Booth({ onLeave }: { onLeave: () => void }) {
             </p>
           </div>
 
+          <div className="field">
+            <label htmlFor="upSignature">Sign your whistle!</label>
+            <input
+              id="upSignature"
+              type="text"
+              value={signature}
+              maxLength={80}
+              // Optionality lives in the placeholder rather than a hint line:
+              // the eye is already here, and the field is meant to feel light.
+              placeholder="Your name — or leave blank to stay anonymous"
+              onChange={(e) => setSignature(e.target.value)}
+            />
+          </div>
+
           {/* No note-count gate here any more: the server's segmenter is the only
               one whose count matters, and it rejects a short take with
               `too_few_notes`, which live.ts turns into a sentence. */}
           <button
             className="booth-submit"
             type="button"
-            disabled={busy || !title.trim()}
+            disabled={!canSubmit}
             onClick={submit}
           >
-            {busy ? "Sending…" : "Send to the queue"}
+            Send to the queue
           </button>
-          {/* Nobody can rate their own whistling. */}
-          <p className="hint" style={{ textAlign: "center" }}>
-            Difficulty is set by the first 100 plays.
-          </p>
         </>
       )}
     </div>

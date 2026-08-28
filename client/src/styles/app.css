@@ -733,3 +733,87 @@ button { font: inherit; color: inherit; }
   0%, 100% { opacity: .28; transform: translateY(0); }
   40% { opacity: 1; transform: translateY(-5px); }
 }
+
+/* How everyone else did. Quiet: it frames the guess, it isn't the point. */
+.solve-rate {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* The untouched-day invitation. Full contrast, because it's asking rather than
+   reporting — but not blaze: that belongs to the play button. */
+.solve-rate--invite { color: var(--ink); }
+
+/* ───────────────────────── toasts ─────────────────────────
+   Top-right, above everything, outside the shell — an upload's outcome arrives
+   long after the booth has been left behind. */
+.toasts {
+  position: fixed;
+  /* Clear of the header rather than flush to the top: at the very top it sits
+     over "Back to the daily" and blocks the way out of the booth. */
+  top: calc(max(14px, env(safe-area-inset-top)) + 52px);
+  right: 14px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Narrow enough not to cover the header on a phone, wide enough for a
+     rejection reason, which is a whole sentence. */
+  width: min(340px, calc(100vw - 28px));
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  padding: 11px 12px;
+  box-shadow: 4px 4px 0 var(--ink);
+  font-size: 13.5px;
+  line-height: 1.4;
+  animation: toast-in .22s cubic-bezier(.2, .9, .3, 1);
+}
+.toast.is-good { background: var(--good); color: var(--on-good); }
+/* Blaze, not a new red: it is the same "that didn't work" as a wrong guess. */
+.toast.is-bad { background: var(--blaze); color: var(--blaze-ink); }
+
+.toast span { flex: 1; }
+.toast button {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 17px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+  opacity: .7;
+}
+.toast button:hover { opacity: 1; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Who whistled it. Quieter than the tags on the daily — a credit, not a clue. */
+.credit {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .08em;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* Inside the answer block on the reveal, so it inherits the block's own ink. */
+.res-by {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .08em;
+  margin-top: 6px;
+  opacity: .8;
+}

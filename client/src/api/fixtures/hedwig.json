@@ -37,7 +37,10 @@
   ],
   "category": "Film",
   "difficulty": "Tricky",
-  "avgSolveNote": 4,
+  "avgSolveLevel": 2,
+  "solvedCount": 37,
+  "failedCount": 23,
+  "signature": "Téo",
   "title": "Hedwig's Theme",
   "from": "Harry Potter · John Williams",
   "accepted": [

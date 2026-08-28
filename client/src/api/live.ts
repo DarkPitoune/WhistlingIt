@@ -83,7 +83,10 @@ type DailyRow = Pick<
   date: string;
   reveal: RevealLadder;
   difficulty: string;
-  avg_solve_note: number;
+  avg_solve_level: number;
+  solved_count: number;
+  failed_count: number;
+  signature: string | null;
 };
 
 const CATEGORIES: readonly Category[] = ["Film", "Jingle", "TV Series", "Video Games", "Music"];
@@ -127,16 +130,25 @@ export function toClip(row: DailyRow): DailyClip {
     startAt: row.reveal?.t0 ?? 0,
     category: oneOf(CATEGORIES, LEGACY_CATEGORIES[row.category ?? ""] ?? row.category, "Film"),
     difficulty: oneOf(DIFFICULTIES, row.difficulty, "Fair"),
-    // Clamped because the bar indexes noteEnds with it.
-    avgSolveNote: Math.min(Math.max(1, Math.round(row.avg_solve_note)), noteEnds.length || 1),
+    // Floored at 1 only. The upper bound is the ladder's length, which is built
+    // from the note count in game/levels.ts — clamping properly belongs where the
+    // ladder is known, so `notesAtLevel` does it.
+    avgSolveLevel: Math.max(1, Math.round(row.avg_solve_level)),
+    // Older rows predate the counters; treat a missing count as zero rather than
+    // letting NaN reach the percentage.
+    solvedCount: Math.max(0, Math.trunc(row.solved_count ?? 0)),
+    failedCount: Math.max(0, Math.trunc(row.failed_count ?? 0)),
     title: row.title,
+    // Blank collapses to null so the screens have one unsigned case to render,
+    // matching what ingest stores.
+    signature: (row.signature ?? "").trim() || null,
     // Nullable in the schema, and React would render the word "null".
     from: row.from_label ?? "",
     accepted: row.accepted_norm,
   };
 }
 
-async function rpc<T>(fn: string): Promise<T> {
+async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: "POST",
     headers: {
@@ -144,7 +156,7 @@ async function rpc<T>(fn: string): Promise<T> {
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       "Content-Type": "application/json",
     },
-    body: "{}",
+    body: JSON.stringify(args),
   });
   if (!res.ok) {
     // PostgREST puts a readable reason in `message`; anything else is a network
@@ -166,12 +178,22 @@ export const liveApi: WhistlingApi = {
     return toClip(row);
   },
 
-  async submitRound(_result: RoundResult): Promise<void> {
-    // Intentionally does nothing. Difficulty and the average solve note are the
-    // only things this would feed, and both need a write per play — deferred, so
-    // get_daily() serves placeholders for them. When the play counters land, this
-    // becomes one more rpc() call and nothing else in the app changes.
-    return;
+  async submitRound(result: RoundResult): Promise<void> {
+    // Fire and forget, and deliberately never rethrown by the caller: the result
+    // is already saved locally, so a dropped counter must not cost the player
+    // their reveal. `record_round` reports whether it wrote, which is worth a
+    // line in the console — a steady stream of `false` means the note count or
+    // the song id has drifted, and silence would hide it.
+    // The date is what the counters are keyed on, so it has to be the day the
+    // round belonged to — not "now". Replaying an old day files the result
+    // against that day, which is the whole reason the server takes it.
+    const wrote = await rpc<boolean>("record_round", {
+      d: result.date,
+      song: result.clipId,
+      won: result.won,
+      solved_at_level: result.won ? result.solvedAtLevel : null,
+    });
+    if (!wrote) console.warn("[round] the server declined to count this round", result);
   },
 
   async upload(draft: UploadDraft): Promise<UploadReceipt> {
@@ -183,6 +205,7 @@ export const liveApi: WhistlingApi = {
     form.append("title", draft.title);
     if (draft.from) form.append("from_label", draft.from);
     form.append("category", draft.category);
+    form.append("signature", draft.signature);
     // Repeated field, one value per accepted answer. The API normalises them and
     // stores both the raw and normalised forms.
     for (const a of draft.accepted) form.append("accepted_answers", a);

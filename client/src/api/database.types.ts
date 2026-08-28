@@ -17,7 +17,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -48,15 +48,24 @@ export type Database = {
     Tables: {
       daily: {
         Row: {
+          failed_count: number
           puzzle_date: string
+          solve_level_sum: number
+          solved_count: number
           song_id: string
         }
         Insert: {
+          failed_count?: number
           puzzle_date: string
+          solve_level_sum?: number
+          solved_count?: number
           song_id: string
         }
         Update: {
+          failed_count?: number
           puzzle_date?: string
+          solve_level_sum?: number
+          solved_count?: number
           song_id?: string
         }
         Relationships: [
@@ -135,6 +144,18 @@ export type Database = {
     }
     Functions: {
       get_daily: { Args: never; Returns: Json }
+      get_daily_on: { Args: { d: string }; Returns: Json }
+      level_count: { Args: { n_notes: number }; Returns: number }
+      puzzle_payload: { Args: { d: string; sid: string }; Returns: Json }
+      record_round: {
+        Args: {
+          d: string
+          solved_at_level?: number
+          song: string
+          won: boolean
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

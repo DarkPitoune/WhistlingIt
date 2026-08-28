@@ -22,6 +22,20 @@ export function unlockedSeconds(clip: DailyClip, notes: number): number {
 }
 
 /**
+ * Notes unlocked at a 1-based ladder rung.
+ *
+ * The inverse of the scoring the server stores: a round's score is its rung
+ * (1..ladder.length, always one apart), and this turns a rung back into the note
+ * count a player actually reads. Clamped, because the average arrives from the
+ * server and a ladder shorter than it expects must not index past the end.
+ */
+export function notesAtLevel(ladder: readonly number[], level: number): number {
+  if (ladder.length === 0) return 0;
+  const i = Math.min(Math.max(1, Math.round(level)), ladder.length) - 1;
+  return ladder[i] ?? ladder[ladder.length - 1] ?? 0;
+}
+
+/**
  * Where the tune ends, which is not where the file ends.
  *
  * `duration` is the whole recording, trailing silence and ring-out included — on the

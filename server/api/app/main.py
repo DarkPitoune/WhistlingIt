@@ -91,6 +91,8 @@ async def create_upload(
     accepted_answers: Annotated[list[str], Form()] = [],
     category: Annotated[str | None, Form()] = None,
     from_label: Annotated[str | None, Form()] = None,
+    # Optional: an unsigned whistle is credited to nobody rather than refused.
+    signature: Annotated[str | None, Form()] = None,
 ):
     with tempfile.TemporaryDirectory() as tmp:
         original = Path(tmp) / "upload.bin"
@@ -112,6 +114,7 @@ async def create_upload(
             accepted_answers=accepted_answers,
             category=category,
             from_label=from_label,
+            signature=signature,
         )
 
         try:

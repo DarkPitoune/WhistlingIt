@@ -51,8 +51,38 @@ export interface DailyClip {
   startAt?: number;
   category: Category;
   difficulty: Difficulty;
-  /** 1-based note number where the median player solves it. Drives the bar's tick. */
-  avgSolveNote: number;
+  /**
+   * The average ladder rung solvers reached, 1-based — level 1 is three notes,
+   * level 2 four, up to the last level which is the whole tune.
+   *
+   * A rung rather than a note count, because the rungs are 3·4·5·6·7·all and
+   * averaging those jumps lands between them: on a 21-note tune one player
+   * finishing at "all" would drag the mean to note 9, which is not a level
+   * anybody was offered. Scoring the rung keeps every gap at one.
+   *
+   * Use `notesAtLevel(round.ladder, …)` to turn it back into notes for display.
+   * Measured from `solvedCount` plays; falls back to level 2 until someone solves.
+   */
+  avgSolveLevel: number;
+  /**
+   * How many rounds on this tune ended solved, and how many ran out of notes.
+   *
+   * Raw counts rather than a percentage, because "nobody has played it" and
+   * "nobody has solved it" need telling apart and a single 0 cannot. Counted per
+   * *tune*, not per day — the pool cycles, so a tune can be aired more than once.
+   *
+   * Best-effort: the write path is an unauthenticated RPC, so these can be
+   * inflated by anyone who wants to. Treat as telemetry, not as a scoreboard.
+   */
+  solvedCount: number;
+  failedCount: number;
+  /**
+   * Who whistled it, or null when they didn't say — the screens render that as
+   * "Anonymous Whistler". Free text, and shown before the tune is guessed, so a
+   * signature that names the tune would give it away. A moderation problem, not
+   * one this type can solve.
+   */
+  signature: string | null;
   title: string;
   from: string;
   /** Pre-normalised accepted answers. See src/game/match.ts for the rules. */
@@ -66,8 +96,13 @@ export interface RoundResult {
   clipId: string;
   date: string;
   won: boolean;
-  /** 1-based note count the player was on when the round ended. */
-  solvedAtNote: number;
+  /**
+   * 1-based ladder rung the player solved on — the round's score.
+   *
+   * The rung, not the note count: rungs are one apart by construction, so they
+   * average into something that is itself a rung. Ignored when `won` is false.
+   */
+  solvedAtLevel: number;
   tape: TryKind[];
 }
 
@@ -84,6 +119,11 @@ export interface UploadDraft {
   from: string;
   category: Category;
   accepted: string[];
+  /**
+   * Who whistled it. Optional: blank means unsigned, and the credit reads
+   * "Anonymous Whistler". Only the length is enforced, server-side.
+   */
+  signature: string;
 }
 
 export interface UploadReceipt {

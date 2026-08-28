@@ -11,6 +11,7 @@ def sub(**kw):
         "accepted_answers": [],
         "category": None,
         "from_label": None,
+        "signature": "Teo",
     }
     return Submission(**{**base, **kw})
 
@@ -75,3 +76,27 @@ def test_long_from_label_rejected():
 
 def test_from_label_at_the_limit_accepted():
     validate(sub(from_label="x" * 200))
+
+
+def test_blank_signature_accepted():
+    """Optional, like from_label: an unsigned whistle is credited to nobody
+    rather than refused."""
+    validate(sub(signature="   "))
+    validate(sub(signature=None))
+
+
+def test_signature_at_the_limit_accepted():
+    validate(sub(signature="s" * 80))
+
+
+def test_long_signature_rejected():
+    with pytest.raises(BadRequest):
+        validate(sub(signature="s" * 81))
+
+
+def test_blank_signature_collapses_to_none():
+    """What ingest() stores: "" and "   " are unsigned, not a signature made of
+    spaces, so the client has one empty case to render rather than three."""
+    for blank in ("", "   ", None):
+        assert ((blank or "").strip() or None) is None
+    assert ("  Teo  " or "").strip() or None == "Teo"

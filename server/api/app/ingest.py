@@ -53,6 +53,9 @@ class Submission:
     accepted_answers: list[str]
     category: str | None
     from_label: str | None
+    # Who whistled it, if they said. Optional — an unsigned whistle is credited
+    # to nobody, which the client renders as "Anonymous Whistler".
+    signature: str | None
 
 
 def validate(sub: Submission) -> tuple[list[str], list[str]]:
@@ -62,6 +65,11 @@ def validate(sub: Submission) -> tuple[list[str], list[str]]:
         raise BadRequest("title is required")
     if len(title) > 200:
         raise BadRequest("title is too long")
+
+    # Optional, like from_label. Only the length is enforced — the column caps
+    # it at 80 too, and a constraint violation would surface as a 500.
+    if sub.signature is not None and len(sub.signature.strip()) > 80:
+        raise BadRequest("signature is too long")
 
     if sub.category is not None and sub.category not in CATEGORIES:
         raise BadRequest(f"category must be one of {', '.join(CATEGORIES)}")
@@ -129,6 +137,9 @@ def ingest(upload: Path, sub: Submission) -> dict:
             "title": raw_answers[0],
             "from_label": (sub.from_label or "").strip() or None,
             "category": sub.category,
+            # Blank collapses to null: "" and "   " both mean unsigned, and
+            # storing them would make the client test for three empty states.
+            "signature": (sub.signature or "").strip() or None,
             "accepted_answers": raw_answers,
             "accepted_norm": norm_answers,
             "notes": payload["notes"],

@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
-import { makeLadder, unlockedSeconds } from "../src/game/levels.ts";
+import { makeLadder, notesAtLevel, unlockedSeconds } from "../src/game/levels.ts";
 import { isRight } from "../src/game/match.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -79,10 +79,16 @@ ok(clip.noteStarts.length === clip.noteEnds.length, "starts and ends are the sam
 ok(clip.accepted.length > 0, "accepted answers present");
 ok(clip.duration > 0, "duration is positive");
 ok(
-  clip.avgSolveNote >= 1 && clip.avgSolveNote <= clip.noteEnds.length,
-  "avgSolveNote indexes noteEnds",
-  `${clip.avgSolveNote} of ${clip.noteEnds.length}`,
+  clip.avgSolveLevel >= 1 && clip.avgSolveLevel <= makeLadder(clip.noteStarts.length).length,
+  "avgSolveLevel indexes the ladder",
+  `level ${clip.avgSolveLevel} of ${makeLadder(clip.noteStarts.length).length}`,
 );
+// The whole point of scoring rungs: the crowd marker must land on a rung.
+{
+  const ladder = makeLadder(clip.noteStarts.length);
+  const notes = notesAtLevel(ladder, clip.avgSolveLevel);
+  ok(ladder.includes(notes), "the average lands on a real level", `${notes} notes`);
+}
 ok(clip.startAt >= 0 && clip.startAt < clip.duration, "startAt is inside the clip");
 ok(
   clip.noteStarts.every((t, i) => i === 0 || t >= clip.noteStarts[i - 1]),

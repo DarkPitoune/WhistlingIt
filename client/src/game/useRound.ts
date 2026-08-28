@@ -18,6 +18,16 @@ export interface Round {
   /** Every wrong guess this round, oldest first. Stays on screen until the round ends. */
   wrongGuesses: string[];
   done: null | { won: boolean };
+  /**
+   * True only when the round ended during *this* mount, not when it was restored
+   * from storage.
+   *
+   * The clip's solve counts were fetched before the round started, so they do not
+   * include the result just recorded. The reveal adds it — but only once: on a
+   * later visit the server's counts already contain it, and adding again would
+   * count the player twice.
+   */
+  justFinished: boolean;
   streak: number;
   /** True for one render after a level unlocks, to drive the count's flip animation. */
   bumped: boolean;
@@ -47,6 +57,7 @@ export function useRound(clip: DailyClip): Round {
   const [done, setDone] = useState<null | { won: boolean }>(() => saved?.done ?? null);
   const [streak, setStreak] = useState(() => loadStreak());
   const [bumped, setBumped] = useState(false);
+  const [justFinished, setJustFinished] = useState(false);
 
   // The round can only end once, however it ends.
   const settled = useRef(saved?.done != null);
@@ -62,6 +73,7 @@ export function useRound(clip: DailyClip): Round {
     (won: boolean, atLevel: number, finalTape: TryKind[], finalGuesses: string[]) => {
       if (settled.current) return;
       settled.current = true;
+      setJustFinished(true);
       setDone({ won });
       setStreak(recordResult(won));
       persist({ level: atLevel, tape: finalTape, guesses: finalGuesses, done: { won } });
@@ -70,7 +82,9 @@ export function useRound(clip: DailyClip): Round {
           clipId: clip.id,
           date: clip.date,
           won,
-          solvedAtNote: ladder[atLevel] ?? clip.noteStarts.length,
+          // `atLevel` is the 0-based index into the ladder; the score is the
+          // rung itself, counted from one.
+          solvedAtLevel: atLevel + 1,
           tape: finalTape,
         })
         .catch((e: unknown) => console.warn("[round] submit failed, kept locally", e));
@@ -124,6 +138,7 @@ export function useRound(clip: DailyClip): Round {
     tape,
     wrongGuesses,
     done,
+    justFinished,
     streak,
     bumped,
     nextNotes: level < ladder.length - 1 ? (ladder[level + 1] ?? null) : null,
