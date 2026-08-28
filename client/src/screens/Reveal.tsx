@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { DailyClip } from "../api";
+import { msUntilNextDay, today } from "../api/day";
 import { Bar } from "../components/Bar";
 import { Tape, tapeText } from "../components/Tape";
 import { PauseIcon, PlayIcon } from "../components/icons";
@@ -74,21 +75,40 @@ function verdict(won: boolean, round: Round): string {
   return `note ${round.notes}/${round.total}`;
 }
 
-/** Time to local midnight. Matches the mock's local-date rollover. */
+/**
+ * Time until the next puzzle.
+ *
+ * The boundary comes from `api/day.ts`, which is also what decides *which*
+ * puzzle you get — so the timer cannot promise a whistle the backend has not
+ * rotated to yet. It used to count to the device's own midnight while the pick
+ * ran on UTC, which in France meant it hit zero two hours early and a reload
+ * served the same tune.
+ */
 function useCountdown(): string {
-  const [text, setText] = useState(() => untilMidnight());
+  const [text, setText] = useState(() => untilNextWhistle());
   useEffect(() => {
-    const id = setInterval(() => setText(untilMidnight()), 1000);
+    const openedOn = today();
+    const id = setInterval(() => {
+      // The day turned over with this screen open. `App.tsx` fetches the daily
+      // once on mount, so nothing else would go and get the new whistle — and a
+      // timer that reaches zero and then just sits there is the exact complaint
+      // this change exists to fix. Compare the day rather than the remaining
+      // milliseconds: past the boundary the countdown rolls straight over to a
+      // fresh 24h and never reads as zero.
+      if (today() !== openedOn) {
+        clearInterval(id);
+        location.reload();
+        return;
+      }
+      setText(untilNextWhistle());
+    }, 1000);
     return () => clearInterval(id);
   }, []);
   return text;
 }
 
-function untilMidnight(): string {
-  const now = new Date();
-  const next = new Date(now);
-  next.setHours(24, 0, 0, 0);
-  const s = Math.max(0, Math.floor((next.getTime() - now.getTime()) / 1000));
+function untilNextWhistle(): string {
+  const s = Math.floor(msUntilNextDay() / 1000);
   return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60]
     .map((v) => String(v).padStart(2, "0"))
     .join(":");
