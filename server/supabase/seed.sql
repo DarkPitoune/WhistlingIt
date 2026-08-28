@@ -64,7 +64,11 @@ insert into public.songs (
 
 -- Pin the reference clip as today's puzzle, so a reset always lands on the one
 -- with real audio behind it rather than on Korobeiniki half the time.
+--
+-- Europe/Paris, matching get_daily(). With 'utc' here, a reset between 22:00 and
+-- 00:00 UTC pinned yesterday's date and the app — already on tomorrow in Paris —
+-- ignored the row and picked at random.
 insert into public.daily (puzzle_date, song_id)
-values ((now() at time zone 'utc')::date, '00000000-0000-4000-8000-000000000001');
+values ((now() at time zone 'Europe/Paris')::date, '00000000-0000-4000-8000-000000000001');
 update public.songs set times_used = 1
  where id = '00000000-0000-4000-8000-000000000001';
