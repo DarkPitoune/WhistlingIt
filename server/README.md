@@ -44,7 +44,7 @@ songs   the pool. audio_path, title, accepted_answers + accepted_norm,
         frozen pipeline output (notes, metrics, pipeline_version,
         params_fingerprint), the precomputed reveal ladder, hidden, times_used
 
-daily   puzzle_date -> song_id. One row per UTC day, written on first read.
+daily   puzzle_date -> song_id. One row per Paris day, written on first read.
 ```
 
 RLS is on with **zero policies**, and the anon/authenticated table grants are
@@ -72,8 +72,10 @@ so **there is no cron job** to fail silently. The pick is
 fully before it repeats and keeps working once exhausted. Only the winner of a
 concurrent race increments `times_used`.
 
-The date is `(now() at time zone 'utc')::date`, not `current_date`. Pinning it in
-SQL means the client's UTC streak key agrees with the server structurally rather
+The date is `(now() at time zone 'Europe/Paris')::date`, not `current_date`. The
+audience is entirely in France, so the tune turns over at their midnight; the
+zone name (not a fixed offset) is what carries that across CET/CEST. Pinning it
+in SQL means the client's streak key agrees with the server structurally rather
 than by luck of the session's `TimeZone`:
 
 ```
@@ -145,7 +147,7 @@ song leaves today's `daily` row still pointing at it — confirmed by testing it
 
 ```sql
 update public.songs set hidden = true where id = '<uuid>';
-delete from public.daily where puzzle_date = (now() at time zone 'utc')::date;
+delete from public.daily where puzzle_date = (now() at time zone 'Europe/Paris')::date;
 ```
 
 **Seeding the real pool.** `get_daily()` returns `null` on an empty pool and the
@@ -162,7 +164,7 @@ is the song pool, which is re-uploadable.
 | No `pgcrypto` | `gen_random_uuid()` is core Postgres since 13, and the extension's schema placement is a footgun. |
 | `search_path = ''` + qualified names | Rather than `= public`. Same intent, and it's what Supabase's linter wants on `security definer`. |
 | Explicit `revoke` on both tables | PLAN's "the entire anon surface is one function" is only true with it. |
-| UTC pinned in SQL | PLAN listed "verify `current_date` is UTC" as a pre-commit check. Pinning removes the check. |
+| Day pinned to Europe/Paris in SQL | PLAN listed "verify `current_date` is UTC" as a pre-commit check. Pinning removes the check. Shipped as UTC; moved to Paris on 2026-08-28 (`20260828060259_paris_day_rotation.sql`) because the countdown had always used local midnight and every player is in France. |
 | `duration_s` is the file's duration | PLAN's comment called it redundant with `reveal.ends[-1]`. It isn't: the timeline hatches the locked tail, so it needs the file length. |
 | `from_label` column | The booth design has a "From" field that PLAN's schema omitted. |
 | `reveal` carries `starts` too | So `get_daily()` never returns the full `notes` array; the client needs the boundaries and none of the f0/midi/confidence. |

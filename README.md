@@ -209,9 +209,9 @@ Still open. The app picks a default for each so it runs; none of them are decide
 | | Question | What the app does for now |
 | --- | --- | --- |
 | 1 | **Notes are an uneven currency.** Three notes is 1.86 s, but note 4 buys only 0.62 s more while note 7 buys 1.86 s. Should a level be "the next note *or* +1.5 s, whichever is longer"? | Pure note ladder, as designed. Changing it touches `makeLadder` in `client/src/game/levels.ts` and nothing else. |
-| 2 | **Timezone.** UTC midnight or local midnight? | **UTC**, decided by the backend. `get_daily()` pins the date to `(now() at time zone 'utc')::date` and `src/api/day.ts` is the one place the client agrees with it. |
-| 3 | **Late arrivals.** Open the app at 23:50 — fresh round, or the tail of the day? | The tail of the day. One global puzzle rotating at UTC midnight, so 23:50 local is whatever UTC day it is. |
-| 4 | **Accounts.** | Device-local streak in `localStorage`, keyed on the UTC date so it agrees with the server. No accounts, no auth, no user data anywhere. |
+| 2 | **Timezone.** UTC midnight or local midnight? | Settled: **Europe/Paris**, decided by the backend. Every player is in France, so the tune turns over at their midnight. `get_daily()` pins the date to `(now() at time zone 'Europe/Paris')::date` and `src/api/day.ts` is the one place the client agrees with it. It was UTC until 2026-08-28, which put the rotation at 02:00 local — two hours after the reveal countdown said it would happen. |
+| 3 | **Late arrivals.** Open the app at 23:50 — fresh round, or the tail of the day? | The tail of the day. One global puzzle rotating at Paris midnight, so 23:50 in France leaves ten minutes of it. |
+| 4 | **Accounts.** | Device-local streak in `localStorage`, keyed on the Paris date so it agrees with the server. No accounts, no auth, no user data anywhere. |
 | 5 | **Booth access.** | Open, and **no queue**: uploads land in the pool live. The pipeline's quality gate is the only filter — it rejects with machine-readable reasons the booth renders as plain language. The backstop is a kill switch, not a review step. |
 | 6 | **Where a reveal starts.** A recording with dead air at the front would spend level 1 on silence. | Settled: the server reports the first note minus a 150 ms lead as `startAt`, and `useClipPlayer` treats it as the floor. |
 
