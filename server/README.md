@@ -68,9 +68,18 @@ puzzle as jsonb, shaped like the client's `DailyClip` contract in snake_case.
 
 Picks and memoizes on the day's first read — `insert … on conflict do nothing` —
 so **there is no cron job** to fail silently. The pick is
-`where not hidden order by times_used, random() limit 1`, so the pool cycles
-fully before it repeats and keeps working once exhausted. Only the winner of a
-concurrent race increments `times_used`.
+`where not hidden order by coalesce(s.id = prev, false), times_used, random()`,
+where `prev` is the most recent already-pinned day. The pool cycles fully before
+it repeats and keeps working once exhausted; the leading term is what stops the
+same whistle opening two days running, which `times_used` alone does not once
+the pool has cycled and every song ties. Yesterday's song is sorted last rather
+than filtered out, so a one-song pool still returns it instead of going empty.
+Only the winner of a concurrent race increments `times_used`.
+
+`times_used` is the picker's entire memory of "this has been on screen", so
+**never repoint a `daily` row by hand** — the counter does not follow, the song
+still looks unused, and it comes straight back around. Change the row and the
+counter together, or delete the row and let `get_daily()` pick again.
 
 The date is `(now() at time zone 'Europe/Paris')::date`, not `current_date`. The
 audience is entirely in France, so the tune turns over at their midnight; the
