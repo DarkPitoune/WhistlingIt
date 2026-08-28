@@ -164,7 +164,7 @@ is the song pool, which is re-uploadable.
 | No `pgcrypto` | `gen_random_uuid()` is core Postgres since 13, and the extension's schema placement is a footgun. |
 | `search_path = ''` + qualified names | Rather than `= public`. Same intent, and it's what Supabase's linter wants on `security definer`. |
 | Explicit `revoke` on both tables | PLAN's "the entire anon surface is one function" is only true with it. |
-| Day pinned to Europe/Paris in SQL | PLAN listed "verify `current_date` is UTC" as a pre-commit check. Pinning removes the check. Shipped as UTC; moved to Paris on 2026-08-28 (`20260828060259_paris_day_rotation.sql`) because the countdown had always used local midnight and every player is in France. |
+| Day pinned to Europe/Paris in SQL | PLAN listed "verify `current_date` is UTC" as a pre-commit check. Pinning removes the check. Shipped as UTC; moved to Paris on 2026-08-28 (`20260828090001_paris_day_rotation.sql`, which covers `get_daily_on()` too) because the countdown had always used local midnight and every player is in France. |
 | `duration_s` is the file's duration | PLAN's comment called it redundant with `reveal.ends[-1]`. It isn't: the timeline hatches the locked tail, so it needs the file length. |
 | `from_label` column | The booth design has a "From" field that PLAN's schema omitted. |
 | `reveal` carries `starts` too | So `get_daily()` never returns the full `notes` array; the client needs the boundaries and none of the f0/midi/confidence. |
