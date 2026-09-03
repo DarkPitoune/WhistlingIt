@@ -16,4 +16,4 @@ export const api: WhistlingApi = isConfigured ? liveApi : mockApi;
 export const apiKind = isConfigured ? "live" : "mock";
 
 export * from "./types";
-export { today } from "./day";
+export { today, parseKey, daysInMonth, firstWeekdayMondayBased } from "./day";

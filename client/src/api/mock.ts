@@ -9,11 +9,44 @@ import hedwig from "./fixtures/hedwig.json";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** The day the real game started, so the calendar's back-stop looks plausible. */
+const MOCK_FIRST_DAY = "2026-08-27";
+/** Two days the fixture pretends nobody was served a whistle. */
+const MOCK_GAPS = new Set(["2026-08-30", "2026-09-02"]);
+
+/** The day after `key`, as a key. Pure calendar arithmetic, like api/day.ts. */
+function nextDay(key: string): string {
+  const [y = 0, m = 1, d = 1] = key.split("-").map(Number);
+  const n = new Date(Date.UTC(y, m - 1, d + 1));
+  const p2 = (v: number) => String(v).padStart(2, "0");
+  return `${n.getUTCFullYear()}-${p2(n.getUTCMonth() + 1)}-${p2(n.getUTCDate())}`;
+}
+
 export const mockApi: WhistlingApi = {
   async getDaily() {
     await wait(320);
     // The fixture carries a fixed date; the mock always serves it as today's round.
     return { ...(hedwig as DailyClip), date: today() };
+  },
+
+  async getByDate(date: string) {
+    await wait(260);
+    // One fixture stands in for every day, but the future is still refused, so
+    // the calendar behaves the same against fixtures as against the server.
+    if (date > today()) return null;
+    return { ...(hedwig as DailyClip), date };
+  },
+
+  async getPuzzleDays(from: string, to: string) {
+    await wait(140);
+    // Every day since the game started, minus a couple of holes so the grid's
+    // "no puzzle that day" state is visible against fixtures too — otherwise the
+    // only way to see it is to run the mock on its very first day.
+    const days: string[] = [];
+    for (let d = MOCK_FIRST_DAY; d <= today() && d <= to; d = nextDay(d)) {
+      if (d >= from && !MOCK_GAPS.has(d)) days.push(d);
+    }
+    return { first: MOCK_FIRST_DAY, days };
   },
 
   async submitRound(result: RoundResult) {

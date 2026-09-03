@@ -145,6 +145,24 @@ export interface UploadReceipt {
 
 export interface WhistlingApi {
   getDaily(): Promise<DailyClip>;
+  /**
+   * The puzzle for a past date, or null when that day was never pinned.
+   *
+   * Null is the ordinary case for the calendar — most squares are days nobody
+   * played — so it is a value, not an error. Future dates are refused
+   * server-side, which is what stops tomorrow's puzzle being read early.
+   */
+  getByDate(date: string): Promise<DailyClip | null>;
+  /**
+   * Which days in `from`…`to` inclusive have a puzzle, and the first day the
+   * game ever ran. Both ends are YYYY-MM-DD, and `days` is sorted.
+   *
+   * One call per month drawn, rather than a `getByDate` per square. `first` is
+   * global, not scoped to the range — the calendar uses it to stop you paging
+   * back past the beginning, and it is the same answer whatever month you ask
+   * from. Null when no puzzle has ever been pinned, i.e. an empty database.
+   */
+  getPuzzleDays(from: string, to: string): Promise<{ first: string | null; days: string[] }>;
   submitRound(result: RoundResult): Promise<void>;
   upload(draft: UploadDraft): Promise<UploadReceipt>;
 }

@@ -40,11 +40,17 @@ interface AudioSessionCapable {
  *
  * Called on every play rather than once at startup, because the booth changes it
  * and has to be able to change it back. That assumes the type applies to the live
- * session rather than being frozen when the AudioContext is constructed — the
- * spec doesn't say, and it's the one load-bearing guess here. If it turns out to
- * be wrong the symptom is specific: on a silenced phone the bar moves and there
- * is still no sound, and the fix is to defer constructing the context to the
- * first tap so the type is set first.
+ * session rather than being frozen when the AudioContext is constructed, which
+ * the spec does not say either way.
+ *
+ * The cold start no longer rests on that assumption — `getContext` declares the
+ * session before it constructs anything, so a fresh page is in `playback` under
+ * either reading. What still rests on it is the round trip through the booth: if
+ * the type turns out to be frozen at construction, coming back from a recording
+ * leaves the context on the `play-and-record` route, which on iOS means the
+ * earpiece rather than the speaker. The symptom is specific — audio that plays at
+ * a fraction of the expected volume, only after visiting the booth — and the fix
+ * is to rebuild the context on the way out rather than re-declaring the type.
  */
 export function setAudioSession(type: AudioSessionType): void {
   const session = (navigator as Navigator & AudioSessionCapable).audioSession;
@@ -53,8 +59,34 @@ export function setAudioSession(type: AudioSessionType): void {
 
 let ctx: AudioContext | null = null;
 
+/**
+ * Declare the session *before* the first AudioContext exists.
+ *
+ * This is the ordering the note above calls the load-bearing guess, and it was
+ * being got wrong. The first thing to touch audio is `loadClip`, from the mount
+ * effect in useClipPlayer — no gesture, no session declared, and it constructs
+ * the context to decode into. `setAudioSession("playback")` did not run until the
+ * first `play()`, by which point WebKit had already resolved the page's `auto`
+ * session to `ambient` and bound the context to it. Ambient is the one the
+ * hardware ringer switch mutes, so the game was silent for anyone whose phone was
+ * on silent — which reads as intermittent only because it depends on a switch
+ * nobody thinks to check.
+ *
+ * Only `auto` is overridden, so the booth's `play-and-record` is never clobbered
+ * by a context built while the mic is the point.
+ *
+ * Deliberately here rather than at module scope: it needs to happen before the
+ * constructor and nowhere earlier, and hanging it off the constructor is the only
+ * version of that which cannot be undone by someone reordering imports.
+ */
+function declareSession(): void {
+  const session = (navigator as Navigator & AudioSessionCapable).audioSession;
+  if (session && session.type === "auto") session.type = "playback";
+}
+
 export function getContext(): AudioContext {
   if (!ctx) {
+    declareSession();
     const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     ctx = new Ctor();
   }

@@ -75,7 +75,8 @@ export function useRound(clip: DailyClip): Round {
       settled.current = true;
       setJustFinished(true);
       setDone({ won });
-      setStreak(recordResult(won));
+      // Past days are playable from the calendar but never move the streak.
+      setStreak(recordResult(won, clip.date));
       persist({ level: atLevel, tape: finalTape, guesses: finalGuesses, done: { won } });
       void api
         .submitRound({

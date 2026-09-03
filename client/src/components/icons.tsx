@@ -53,3 +53,28 @@ export const MoonIcon = () => (
     <path d="M12.5 3a9 9 0 1 0 8.5 11.5A7.2 7.2 0 0 1 12.5 3z" />
   </svg>
 );
+
+/**
+ * The month steppers on the calendar.
+ *
+ * Drawn rather than the ‹ and › glyphs, for a quieter version of the
+ * fast-forward problem above: the guillemets render fine everywhere, they just
+ * sit wrong. Their ink runs entirely above the baseline — they use none of the
+ * descender the line box reserves — so centring that box in a 38px button leaves
+ * the arrow visibly high. How high is a property of Familjen Grotesk, not
+ * something CSS can measure, so the alternative was a magic nudge that would go
+ * stale the day the typeface changes. A path centres on the box by construction.
+ */
+export const ChevronLeftIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6"
+       strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M15 5l-7 7 7 7" />
+  </svg>
+);
+
+export const ChevronRightIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6"
+       strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M9 5l7 7-7 7" />
+  </svg>
+);

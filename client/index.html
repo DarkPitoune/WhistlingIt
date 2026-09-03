@@ -2,7 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!--
+  No zooming. This is a one-column game that already fits a phone, so a pinch
+  only ever strands someone on a half-visible board with no obvious way back.
+
+  `maximum-scale` is the half that iOS actually honours, and it is the half that
+  matters: tapping an input whose text is under 16px makes Safari zoom the page
+  in and never zoom it back out, which is the "zoomed for no reason" you get
+  without asking. app.css also lifts both inputs to 16px on touch devices, so
+  the zoom has no reason to fire even where this hint is ignored.
+-->
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <!--
   The name is written both ways on purpose. People search "whistling it" with a
   space; the brand is one word. Both forms appear in the title and the

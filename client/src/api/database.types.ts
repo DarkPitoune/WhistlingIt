@@ -143,6 +143,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calendar_days: { Args: { d_from: string; d_to: string }; Returns: Json }
       get_daily: { Args: never; Returns: Json }
       get_daily_on: { Args: { d: string }; Returns: Json }
       level_count: { Args: { n_notes: number }; Returns: number }

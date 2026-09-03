@@ -174,6 +174,24 @@ export const liveApi: WhistlingApi = {
     return toClip(row);
   },
 
+  async getByDate(date: string): Promise<DailyClip | null> {
+    // Null means "nothing was pinned for that day", which is most of the
+    // calendar. The server also returns null for a future date rather than
+    // letting tomorrow's puzzle be read early.
+    const row = await rpc<DailyRow | null>("get_daily_on", { d: date });
+    return row ? toClip(row) : null;
+  },
+
+  async getPuzzleDays(from: string, to: string) {
+    const r = await rpc<{ first: string | null; days: string[] }>("calendar_days", {
+      d_from: from,
+      d_to: to,
+    });
+    // Postgres renders a date as YYYY-MM-DD, which is already the key format the
+    // rest of the client uses, so these pass through untouched.
+    return { first: r?.first ?? null, days: r?.days ?? [] };
+  },
+
   async submitRound(result: RoundResult): Promise<void> {
     // Fire and forget, and deliberately never rethrown by the caller: the result
     // is already saved locally, so a dropped counter must not cost the player

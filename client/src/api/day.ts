@@ -84,3 +84,41 @@ export function msUntilNextDay(from: Date = new Date()): number {
 
   return Math.max(0, instant - from.getTime());
 }
+
+/*
+ * ─────────────────────────── calendar arithmetic ───────────────────────────
+ *
+ * Everything below is pure date arithmetic on a Y-M-D triple, with no notion of
+ * "now" in it — which is why UTC appears here and is not a contradiction of the
+ * zone rule above. `Date.UTC` is used as a calendar calculator (how long is
+ * March, what weekday is the 1st) because it is the one constructor with no
+ * local-offset behaviour to get in the way. Any question of the form "what day
+ * is it" goes through `today()`, and only through `today()`.
+ */
+
+const p2 = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * A YYYY-MM-DD key, or null if it isn't one. Used to validate a URL path, so it
+ * has to reject rather than coerce: anything else lands on a made-up day.
+ */
+export function parseKey(key: string): { year: number; month: number; day: number } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!m) return null;
+  const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  // Round-trip so 2026-02-31 is rejected rather than silently rolling forward
+  // into March, which is what the Date constructor would do on its own.
+  const round = `${m[1]}-${p2(month)}-${p2(day)}`;
+  const d = new Date(Date.UTC(year, month - 1, day));
+  const back = `${d.getUTCFullYear()}-${p2(d.getUTCMonth() + 1)}-${p2(d.getUTCDate())}`;
+  return back === round ? { year, month, day } : null;
+}
+
+/** Days in a month, 1-indexed month. */
+export const daysInMonth = (year: number, month: number): number =>
+  new Date(Date.UTC(year, month, 0)).getUTCDate();
+
+/** Weekday of the 1st, as 0 = Monday … 6 = Sunday. The grid starts on Monday. */
+export function firstWeekdayMondayBased(year: number, month: number): number {
+  return (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7;
+}

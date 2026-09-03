@@ -22,7 +22,15 @@ import type { Round } from "../game/useRound";
  */
 const SHARE_URL = "https://whistling.it";
 
-export function Reveal({ clip, round }: { clip: DailyClip; round: Round }) {
+export function Reveal({
+  clip,
+  round,
+  onCalendar,
+}: {
+  clip: DailyClip;
+  round: Round;
+  onCalendar?: () => void;
+}) {
   const won = round.done?.won ?? false;
   // The round is over, so the whole clip is unlocked.
   const player = useClipPlayer(clip.audioUrl, tuneEnd(clip), clip.startAt ?? 0);
@@ -98,6 +106,9 @@ export function Reveal({ clip, round }: { clip: DailyClip; round: Round }) {
 
       <button className="btn-share" onClick={share}>{copied ? "Copied ✓" : "Copy result"}</button>
       <p className="countdown">Next whistle in <b>{countdown}</b></p>
+      {onCalendar && (
+        <button className="btn-skip" onClick={onCalendar}>See the other days</button>
+      )}
     </div>
   );
 }

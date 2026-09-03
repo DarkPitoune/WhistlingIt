@@ -68,11 +68,22 @@ button { font: inherit; color: inherit; }
   flex-direction: column;
 }
 
+/*
+ * Wraps rather than clips. Four things can sit up here at once — wordmark, theme
+ * toggle, the booth button, a streak flame — and below about 370px they stop
+ * fitting on one line. Nowrap doesn't shrink them, it just posts the flame off
+ * the right edge of the phone, where it is invisible and unrecoverable.
+ *
+ * `flex-wrap` only fires when it has to, so every ordinary width keeps the single
+ * line the design draws. `margin-left: auto` on the action group keeps it right
+ * when it is alone on the second row — `space-between` would park it at the start.
+ */
 .app-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px 10px;
   padding: 8px 22px 0;
 }
 
@@ -91,7 +102,10 @@ button { font: inherit; color: inherit; }
 .app-mark i { color: var(--blaze); font-style: normal; }
 
 .top-left { display: flex; align-items: center; gap: 10px; }
-.top-right { display: flex; align-items: center; gap: 9px; }
+.top-right { display: flex; align-items: center; gap: 9px; margin-left: auto; }
+/* Wrap the row, never the labels: a two-line "Add your / whistle!" inside the
+   pill is what flex does by default here, and it is worse than a second row. */
+.top-right > * { flex: none; }
 
 /* Quiet, like the booth link: it is a preference, not part of the game. */
 .theme-toggle {
@@ -137,6 +151,7 @@ button { font: inherit; color: inherit; }
   text-transform: uppercase;
   color: var(--ink-soft);
   text-decoration: none;
+  white-space: nowrap;
 }
 .top-link:hover { border-color: var(--ink); color: var(--ink); }
 
@@ -152,6 +167,20 @@ button { font: inherit; color: inherit; }
 }
 .top-link--blaze:hover { border-color: var(--ink); color: var(--blaze-ink); }
 .top-link--blaze:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
+
+/*
+ * A phone. The header is the only row on the site with four fixed-width things
+ * competing for it, and at 390px it is about 25px short. This buys that back
+ * without touching the layout anywhere else, so the wrap above stays a fallback
+ * for genuinely tiny screens rather than the normal state of an iPhone.
+ */
+@media (max-width: 430px) {
+  .app-top { padding-left: 18px; padding-right: 18px; gap: 8px; }
+  .app-mark { font-size: 14px; }
+  .top-left { gap: 8px; }
+  .top-right { gap: 7px; }
+  .top-link { font-size: 9.5px; letter-spacing: .05em; padding: 4px 9px; }
+}
 
 .eyebrow {
   font-family: var(--font-mono);
@@ -414,6 +443,22 @@ button { font: inherit; color: inherit; }
 }
 .guess-field input::placeholder { color: var(--ink-soft); font-weight: 400; }
 .guess-field input:focus { outline: none; }
+
+/*
+ * 16px is a threshold, not a taste: iOS Safari zooms the whole page in when you
+ * focus an input whose text is smaller, and it does not zoom back out when you
+ * leave. That is the "zoomed for no reason" — one tap on the guess box and the
+ * board is stuck half off-screen for the rest of the round.
+ *
+ * The viewport meta asks Safari not to, and Safari does not always listen. This
+ * removes the reason instead of the permission. Scoped to coarse pointers so the
+ * desktop keeps the size the type scale was drawn at; the half-pixel it adds on
+ * a phone is invisible next to the bug it kills. Same for the booth's fields.
+ */
+@media (pointer: coarse) {
+  .guess-field input,
+  .field input[type="text"] { font-size: 16px; }
+}
 
 .btn-go {
   border: 0;
@@ -882,3 +927,148 @@ button { font: inherit; color: inherit; }
   margin-top: 6px;
   opacity: .8;
 }
+
+/* ───────────────────────── the calendar ─────────────────────────
+   Device-local history, one square per day. Same screen-printed vocabulary as
+   everything else: hard borders, offset shadows, no soft elevation. */
+.calendar {
+  flex: 1;
+  padding: 22px 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cal-title {
+  font-family: var(--font-display);
+  font-weight: var(--w-display);
+  letter-spacing: var(--ls-display);
+  font-size: 22px;
+  text-align: center;
+  flex: 1;
+}
+.cal-nav {
+  width: 38px; height: 38px;
+  flex: none;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--ink);
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+.cal-nav svg { width: 16px; height: 16px; }
+.cal-nav:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
+.cal-nav:disabled { opacity: .3; cursor: not-allowed; box-shadow: none; }
+
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+
+.cal-dow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  color: var(--ink-soft);
+  text-align: center;
+  padding-bottom: 2px;
+}
+.cal-pad { aspect-ratio: 1; }
+
+.cal-day {
+  aspect-ratio: 1;
+  position: relative;
+  border: 2px solid var(--ink);
+  border-radius: 11px;
+  background: var(--ground-2);
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  transition: transform .1s ease;
+}
+.cal-day:hover:not(:disabled) { transform: translateY(-2px); }
+.cal-day:disabled { opacity: .32; cursor: default; border-style: dashed; }
+
+/* Number in the corner, verdict in the middle. Stacking them centred turned the
+   two into one smudge at this size. */
+.cal-num {
+  position: absolute;
+  top: 4px; left: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  opacity: .75;
+}
+.cal-mark {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cal-day.is-won { background: var(--good); border-color: var(--ink); color: var(--on-good); }
+.cal-day.is-lost { background: var(--blaze); border-color: var(--ink); color: var(--blaze-ink); }
+.cal-day.is-today { box-shadow: 0 0 0 3px var(--indigo); }
+/* No whistle ran that day. :disabled already fades and dashes it; this drops the
+   fill too, so a dead square reads as a hole in the month rather than a day you
+   merely haven't got to. */
+.cal-day.is-empty { background: transparent; }
+
+/* Waiting on the server to say which days are real. Every square is disabled
+   until it does, so this only has to say "not yet", not "nothing here". */
+.cal-grid.is-waiting { opacity: .45; }
+
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch {
+  width: 12px; height: 12px;
+  border-radius: 4px;
+  border: 1.5px solid var(--ink);
+  display: inline-block;
+}
+.swatch.is-won { background: var(--good); }
+.swatch.is-lost { background: var(--blaze); }
+.swatch.is-none { background: var(--ground-2); }
+.swatch.is-empty { background: transparent; border-style: dashed; opacity: .5; }
+
+.cal-note { text-align: center; }
+
+/* The way out of a past day, when there is no day to show. Sits where the
+   replay banner would, so the escape hatch is always in the same place. */
+.cal-strip { margin: 10px 22px 0; text-align: center; }
+
+/* Replaying an old day: say so, without dressing it up as an error. The link
+   back to the calendar shares the strip — wrapping under the date on a narrow
+   phone rather than squeezing beside it. */
+.past-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 12px;
+  margin: 12px 22px 0;
+  padding: 9px 12px;
+  border: 1.5px dashed var(--indigo);
+  border-radius: 12px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-align: center;
+}
+.past-banner b { color: var(--ink); }
