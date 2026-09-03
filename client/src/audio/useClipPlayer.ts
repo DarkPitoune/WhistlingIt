@@ -17,6 +17,14 @@ export interface ClipPlayer {
   pause: () => void;
   toggle: () => void;
   seek: (t: number) => void;
+  /**
+   * Move the playhead by `seconds`, forward or back, keeping playback going.
+   *
+   * Clamped to the same floor and ceiling as `seek`, so nudging forward cannot
+   * reach past the unlocked stretch and nudging back stops at the first note
+   * rather than at second zero.
+   */
+  nudge: (seconds: number) => void;
 }
 
 /**
@@ -168,6 +176,27 @@ export function useClipPlayer(url: string | null, limit: number, start = 0): Cli
     setPos(clamped);
   }, []);
 
+  const nudge = useCallback((seconds: number) => {
+    // posRef, not `pos`: while playing, state trails the frame loop by up to a
+    // frame, and nudging twice quickly off stale state would lose the first jump.
+    const ceiling = limitRef.current;
+    const target = Math.max(startRef.current, Math.min(posRef.current + seconds, ceiling));
+    seek(target);
+    if (!playing) return;
+
+    // Landing on the ceiling is the same event as playback reaching it, so stop
+    // there. Calling `play` instead would hit its restart-from-the-top rule —
+    // a playhead at the end means "press play again to replay" — and nudging
+    // forward would silently start the clip over, which it did.
+    if (target >= ceiling - 0.05) {
+      pause();
+      return;
+    }
+    // Playback is a scheduled source node with a fixed span, so moving the
+    // playhead means re-scheduling. `play` tears the old node down itself.
+    void play();
+  }, [seek, playing, play, pause]);
+
   const toggle = useCallback(() => { if (playing) pause(); else void play(); }, [playing, pause, play]);
 
   // A level unlocking mid-playback would leave the source node scheduled against the
@@ -182,5 +211,5 @@ export function useClipPlayer(url: string | null, limit: number, start = 0): Cli
 
   useEffect(() => teardown, [teardown]);
 
-  return { loading, ready: !!buffer, error, playing, pos, play, pause, toggle, seek };
+  return { loading, ready: !!buffer, error, playing, pos, play, pause, toggle, seek, nudge };
 }

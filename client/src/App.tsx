@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { DailyClip, UploadDraft } from "./api";
 import { api } from "./api";
 import { FlameIcon } from "./components/icons";
+import { ThemeToggle } from "./components/ThemeToggle";
 import { Toasts, useToasts } from "./components/Toasts";
 import { useRound } from "./game/useRound";
 import { Daily } from "./screens/Daily";
@@ -57,6 +58,14 @@ export default function App() {
 
   return (
     <>
+      {/*
+        The only h1 on the page. The app's biggest text is the note count ("1/12")
+        and the wordmark is a button, so without this there is no heading at all —
+        which reads badly to a screen reader and leaves a crawler with nothing to
+        call the page. Hidden rather than shown: the design's element count is the
+        point of that screen, and this adds a name, not a banner.
+      */}
+      <h1 className="sr-only">WhistlingIt — Whistling It, the daily whistled tune game</h1>
       <Toasts toasts={toasts} onDismiss={dismiss} />
       {route === "booth" ? (
         <div className="shell">
@@ -80,7 +89,12 @@ export default function App() {
 function Header({ onHome, right }: { onHome: () => void; right?: React.ReactNode }) {
   return (
     <div className="app-top">
-      <button className="app-mark" onClick={onHome}>Whistling<i>It</i></button>
+      {/* The toggle sits on the left, with the wordmark: the right-hand side is
+          the action zone and is already two items wide on a phone. */}
+      <div className="top-left">
+        <button className="app-mark" onClick={onHome}>Whistling<i>It</i></button>
+        <ThemeToggle />
+      </div>
       <div className="top-right">{right}</div>
     </div>
   );

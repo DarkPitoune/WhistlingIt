@@ -3,16 +3,73 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="One whistled tune a day. You get three notes.">
+<!--
+  The name is written both ways on purpose. People search "whistling it" with a
+  space; the brand is one word. Both forms appear in the title and the
+  description so the page matches either spelling.
+-->
+<title>WhistlingIt — Whistling It, the daily whistled tune game</title>
+<meta name="description" content="Whistling It is a daily guessing game where every clip is someone whistling the tune. You start with one note — every miss buys you another. A new whistle every day.">
+
+<!-- Absolute, and without a query string: the app puts dates and /booth in the
+     path, and every one of those should credit the same canonical page. -->
+<link rel="canonical" href="https://whistling.it/">
+
 <meta name="theme-color" content="#E8E9F4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#101128" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Ctext%20y%3D%22.9em%22%20font-size%3D%2290%22%3E%F0%9F%98%97%3C/text%3E%3C/svg%3E">
-<title>WhistlingIt</title>
+
+<!-- Shares are how a game like this gets found, and the reveal card exists to be
+     pasted into a group chat. Without these a link unfurls as a bare URL. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="WhistlingIt">
+<meta property="og:url" content="https://whistling.it/">
+<meta property="og:title" content="Whistling It — the daily whistled tune game">
+<meta property="og:description" content="One tune a day, whistled. You start with one note; every miss buys you another. Can you name it?">
+<meta property="og:image" content="https://whistling.it/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="WhistlingIt — one whistled tune a day.">
+<meta name="twitter:card" content="summary_large_image">
+
+<!--
+  Tells Google the brand name and that the site is a game, which is what a
+  "whistling it" query is looking for. `alternateName` is the spaced spelling.
+-->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "WhistlingIt",
+  "alternateName": "Whistling It",
+  "url": "https://whistling.it/",
+  "description": "A daily guessing game where every clip is someone whistling the tune.",
+  "inLanguage": "en",
+  "isFamilyFriendly": true
+}
+</script>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Martian+Mono:wght@400;600&family=Unbounded:wght@700;900&display=swap">
 </head>
 <body>
 <div id="root"></div>
+<script>
+  /*
+   * Apply a stored theme before the first paint.
+   *
+   * Without this, someone who chose the theme opposite to their system setting
+   * sees the system one for a frame while the bundle loads and React mounts —
+   * a white flash on a dark phone. Nothing stored means follow the system, which
+   * tokens.css already does through prefers-color-scheme, so this leaves the
+   * attribute alone in that case rather than freezing today's value.
+   *
+   * Kept in sync with the KEY in src/components/ThemeToggle.tsx.
+   */
+  try {
+    var t = localStorage.getItem("whistlingit.theme");
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+  } catch (e) { /* private mode: fall through to the system setting */ }
+</script>
 <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

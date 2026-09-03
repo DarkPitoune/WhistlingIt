@@ -1,0 +1,17 @@
+# whistling.it
+#
+# Everything is public and there is nothing to hide from a crawler, so this file
+# exists to point at the sitemap rather than to restrict anything. Worth knowing:
+# an absent robots.txt already means "crawl everything", so this does not by
+# itself make the site rank — it just makes the sitemap discoverable and stops a
+# 404 showing up in Search Console.
+
+User-agent: *
+Allow: /
+
+# The game routes (/booth, /calendar, /2026-09-02, …) are client-side only. On
+# GitHub Pages an unknown path is served as 404.html, so they answer with a 404
+# status even though the app renders fine. They are deliberately left out of the
+# sitemap for that reason; do not add them until the hosting can return 200.
+
+Sitemap: https://whistling.it/sitemap.xml

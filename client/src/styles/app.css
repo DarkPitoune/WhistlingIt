@@ -29,6 +29,19 @@ body::before {
 }
 
 h1, h2, h3, h4 { text-wrap: balance; margin: 0; }
+
+/* Present to assistive tech and to a crawler, absent to the eye. Not
+   `display: none`, which would take it out of the accessibility tree too. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 p { margin: 0; }
 button { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--indigo); outline-offset: 3px; border-radius: 4px; }
@@ -77,7 +90,25 @@ button { font: inherit; color: inherit; }
 }
 .app-mark i { color: var(--blaze); font-style: normal; }
 
+.top-left { display: flex; align-items: center; gap: 10px; }
 .top-right { display: flex; align-items: center; gap: 9px; }
+
+/* Quiet, like the booth link: it is a preference, not part of the game. */
+.theme-toggle {
+  width: 28px; height: 28px;
+  flex: none;
+  border: 1.5px solid var(--rule);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  transition: border-color .15s ease, color .15s ease;
+}
+.theme-toggle svg { width: 14px; height: 14px; }
+.theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
 
 .streak {
   display: inline-flex;
@@ -297,6 +328,36 @@ button { font: inherit; color: inherit; }
   100% { transform: none; }
 }
 
+/* Play in the middle, the two nudges either side. `gap` rather than margins so
+   the row stays centred on the play button whatever the buttons weigh. */
+.transport { display: flex; align-items: center; justify-content: center; gap: 18px; }
+
+.seek {
+  width: 46px; height: 46px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 0 var(--ink);
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+/* A signed number rather than an icon: at this size "+2" says what the button
+   does more precisely than any arrow, and there is no glyph that can go missing. */
+.seek {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.seek:active { transform: translateY(4px); box-shadow: 0 0 0 var(--ink); }
+.seek:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+
 .play {
   width: 104px; height: 104px;
   border-radius: 50%;
@@ -447,17 +508,12 @@ button { font: inherit; color: inherit; }
 /* A skip and a wrong guess cost the same, so they read the same. The glyph is the
    only thing telling them apart — one currency, two ways of spending it. */
 .tape i.skip { background: var(--blaze); }
-.tape i.skip::after {
-  content: "⏵⏵";
-  position: absolute;
-  inset: 0;
+.tape i.skip {
   display: grid;
   place-items: center;
   color: var(--blaze-ink);
-  font-size: 13px;
-  letter-spacing: -1.5px;
-  line-height: 1;
 }
+.tape i.skip svg { width: 15px; height: 15px; }
 .tape i.win { background: var(--good); }
 
 .res-line {

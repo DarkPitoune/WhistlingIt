@@ -12,6 +12,15 @@ import type { Round } from "../game/useRound";
 /** How long the struck-through wrong guess sits there before the count flips over it. */
 const STRIKE_MS = 520;
 
+/**
+ * How far the seek buttons move the playhead, and what they print on themselves.
+ *
+ * Two seconds is still most of an early reveal — the first rung is a single note —
+ * so the clamping in `nudge` is doing real work rather than guarding an edge case.
+ * The labels derive from it, so a button can never promise a jump it won't make.
+ */
+const NUDGE_S = 2;
+
 export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
   const player = useClipPlayer(clip.audioUrl, round.unlocked, clip.startAt ?? 0);
   useSpaceToggle(player.toggle, player.ready);
@@ -90,14 +99,36 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
           <span className="count-lab">notes unlocked</span>
         </div>
 
-        <button
-          className={`play${player.playing ? " on" : ""}`}
-          onClick={player.toggle}
-          disabled={!player.ready}
-          aria-label={player.playing ? "Pause" : "Play"}
-        >
-          {player.playing ? <PauseIcon /> : <PlayIcon />}
-        </button>
+        {/* Flanking play, the way every media player does it — near enough to the
+            thumb that scrubbing the bar is for jumping, not for nudging. */}
+        <div className="transport">
+          <button
+            className="seek"
+            onClick={() => player.nudge(-NUDGE_S)}
+            disabled={!player.ready}
+            aria-label={`Back ${NUDGE_S} seconds`}
+          >
+            -{NUDGE_S}s
+          </button>
+
+          <button
+            className={`play${player.playing ? " on" : ""}`}
+            onClick={player.toggle}
+            disabled={!player.ready}
+            aria-label={player.playing ? "Pause" : "Play"}
+          >
+            {player.playing ? <PauseIcon /> : <PlayIcon />}
+          </button>
+
+          <button
+            className="seek"
+            onClick={() => player.nudge(NUDGE_S)}
+            disabled={!player.ready}
+            aria-label={`Forward ${NUDGE_S} seconds`}
+          >
+            +{NUDGE_S}s
+          </button>
+        </div>
       </div>
 
       <Bar

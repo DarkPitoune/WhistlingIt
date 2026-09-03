@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One entry, on purpose.
+
+  Every other path is client-side routing that GitHub Pages answers with a 404
+  status, and listing a URL that returns 404 is worse than not listing it: it
+  spends crawl budget and reports errors in Search Console. The daily changes
+  content at the same URL, which is what `daily` describes.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://whistling.it/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
