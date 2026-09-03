@@ -10,7 +10,8 @@
     "typecheck": "tsc -b",
     "clip": "node scripts/render-whistle.mjs",
     "check:match": "node scripts/check-match.mjs",
-    "check:play-flow": "node scripts/check-play-flow.mjs"
+    "check:play-flow": "node scripts/check-play-flow.mjs",
+    "check:backfill": "node --import ./scripts/ts-resolve.mjs scripts/check-backfill.mjs"
   },
   "dependencies": {
     "react": "^19.2.0",

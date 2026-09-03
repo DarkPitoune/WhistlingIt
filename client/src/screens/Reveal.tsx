@@ -57,6 +57,15 @@ export function Reveal({
     failedCount: clip.failedCount + (round.justFinished && !won ? 1 : 0),
   });
 
+  /*
+   * A day rebuilt from the old streak knows one thing — that it was solved — and
+   * the four lines below it are all about *how*. An empty tape, "got it on note
+   * 1" and a share card claiming a perfect round would each be an invention, so
+   * they come out, and the gap says plainly why. The answer itself is the part
+   * worth keeping, and it is the part that still holds.
+   */
+  const recovered = round.recovered;
+
   useEffect(() => {
     if (!copied) return;
     const t = setTimeout(() => setCopied(false), 1600);
@@ -85,17 +94,26 @@ export function Reveal({
         <p className="res-by">{whistlerCredit(clip)}</p>
       </div>
 
-      <Tape tape={round.tape} rungs={round.ladder.length} won={won} />
-      <p className="res-line">
-        <b>{won ? "got it on" : ""} {verdict(won, round)}</b>
-        {/* Dropped when nobody has solved it: the payload's average is a fallback
-            at that point, and "most got it on 2" with no solvers is a fiction.
-            The player's own solve is not in these counts yet either. */}
-        {clip.solvedCount > 0 && <> · most got it on {notesAtLevel(round.ladder, clip.avgSolveLevel)}</>}
-      </p>
-      {/* Its own line rather than a third clause: the one above is already two
-          facts wide, and this one is about everybody else. */}
-      {rate && <p className="solve-rate">{rate}</p>}
+      {recovered ? (
+        <p className="res-recovered">
+          You solved this one before the calendar existed, so the round itself
+          wasn't kept — only that you got it.
+        </p>
+      ) : (
+        <>
+          <Tape tape={round.tape} rungs={round.ladder.length} won={won} />
+          <p className="res-line">
+            <b>{won ? "got it on" : ""} {verdict(won, round)}</b>
+            {/* Dropped when nobody has solved it: the payload's average is a fallback
+                at that point, and "most got it on 2" with no solvers is a fiction.
+                The player's own solve is not in these counts yet either. */}
+            {clip.solvedCount > 0 && <> · most got it on {notesAtLevel(round.ladder, clip.avgSolveLevel)}</>}
+          </p>
+          {/* Its own line rather than a third clause: the one above is already two
+              facts wide, and this one is about everybody else. */}
+          {rate && <p className="solve-rate">{rate}</p>}
+        </>
+      )}
 
       {/* Now that the day is done, the whole tune is listenable. */}
       <button className="btn-replay" onClick={player.toggle} disabled={!player.ready}>
@@ -104,7 +122,11 @@ export function Reveal({
       </button>
       <Bar duration={tuneEnd(clip)} open={tuneEnd(clip)} heard={player.pos} showKnob />
 
-      <button className="btn-share" onClick={share}>{copied ? "Copied ✓" : "Copy result"}</button>
+      {/* No result to copy, and the offer to play it properly goes where the
+          share button would have been — it is the thing to do on this screen. */}
+      {recovered
+        ? <button className="btn-share" onClick={round.replay}>Play it again</button>
+        : <button className="btn-share" onClick={share}>{copied ? "Copied ✓" : "Copy result"}</button>}
       <p className="countdown">Next whistle in <b>{countdown}</b></p>
       {onCalendar && (
         <button className="btn-skip" onClick={onCalendar}>See the other days</button>

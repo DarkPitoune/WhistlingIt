@@ -570,6 +570,18 @@ button { font: inherit; color: inherit; }
 }
 .res-line b { color: var(--ink); }
 
+/* Stands in for the tape and the two stat lines on a day recovered from an old
+   streak. Sentence case and the body font, not the mono the stats use: it is an
+   explanation of an absence, not another number. */
+.res-recovered {
+  max-width: 34ch;
+  margin: 0 auto;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
 .btn-share {
   border: 2px solid var(--ink);
   background: var(--butter);

@@ -3,7 +3,7 @@ import type { DailyClip, TryKind } from "../api";
 import { api } from "../api";
 import { acceptedFor, isRight } from "./match";
 import { makeLadder, unlockedSeconds } from "./levels";
-import { loadRound, loadStreak, recordResult, saveRound } from "./storage";
+import { isRecovered, loadRound, loadStreak, recordResult, saveRound } from "./storage";
 
 export interface Round {
   /** How many notes are unlocked right now. */
@@ -18,6 +18,14 @@ export interface Round {
   /** Every wrong guess this round, oldest first. Stays on screen until the round ends. */
   wrongGuesses: string[];
   done: null | { won: boolean };
+  /**
+   * True when `done` was deduced from an old streak rather than played.
+   *
+   * The day was won — that much the streak proves — but the tape, the note it
+   * fell on and the guesses along the way were never kept, so the reveal has to
+   * say less than usual instead of showing an empty tape as if it meant nothing.
+   */
+  recovered: boolean;
   /**
    * True only when the round ended during *this* mount, not when it was restored
    * from storage.
@@ -41,6 +49,8 @@ export interface Round {
    *  the struck-through guess land before the count flips over it. */
   miss: (text: string) => void;
   skip: () => void;
+  /** Throw away a recovered result and play the day properly. */
+  replay: () => void;
 }
 
 export function useRound(clip: DailyClip): Round {
@@ -55,6 +65,7 @@ export function useRound(clip: DailyClip): Round {
   const [tape, setTape] = useState<TryKind[]>(() => saved?.tape ?? []);
   const [wrongGuesses, setWrongGuesses] = useState<string[]>(() => saved?.guesses ?? []);
   const [done, setDone] = useState<null | { won: boolean }>(() => saved?.done ?? null);
+  const [recovered, setRecovered] = useState(() => !!saved && isRecovered(saved));
   const [streak, setStreak] = useState(() => loadStreak());
   const [bumped, setBumped] = useState(false);
   const [justFinished, setJustFinished] = useState(false);
@@ -128,6 +139,25 @@ export function useRound(clip: DailyClip): Round {
   const miss = useCallback((text: string) => spend("wrong", text), [spend]);
   const skip = useCallback(() => spend("skip"), [spend]);
 
+  /**
+   * Drop a recovered result and start the day from note one.
+   *
+   * Deliberately writes nothing. A recovered ✓ is the only trace left of that
+   * day, so it survives until a real round replaces it — walking away mid-replay,
+   * or closing the tab, leaves the square exactly as it was. `settled` reopens so
+   * the new round can end and be saved over the top; if it ends in a miss, that
+   * is a real result and it is allowed to win.
+   */
+  const replay = useCallback(() => {
+    setRecovered(false);
+    setLevel(0);
+    setTape([]);
+    setWrongGuesses([]);
+    setDone(null);
+    setJustFinished(false);
+    settled.current = false;
+  }, []);
+
   const notes = ladder[level] ?? clip.noteStarts.length;
 
   return {
@@ -139,6 +169,7 @@ export function useRound(clip: DailyClip): Round {
     tape,
     wrongGuesses,
     done,
+    recovered,
     justFinished,
     streak,
     bumped,
@@ -147,5 +178,6 @@ export function useRound(clip: DailyClip): Round {
     solve,
     miss,
     skip,
+    replay,
   };
 }
