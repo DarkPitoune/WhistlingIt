@@ -4,6 +4,7 @@ import { Bar } from "../components/Bar";
 import { GoIcon, PauseIcon, PlayIcon } from "../components/icons";
 import { useClipPlayer } from "../audio/useClipPlayer";
 import { useSpaceToggle } from "../audio/useSpaceToggle";
+import { useT } from "../i18n/useI18n";
 import { difficultyFor, difficultyStep } from "../game/difficulty";
 import { notesAtLevel, tuneEnd } from "../game/levels";
 import { solveRate, whistlerCredit } from "../game/stats";
@@ -22,6 +23,7 @@ const STRIKE_MS = 520;
 const NUDGE_S = 2;
 
 export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
+  const t = useT();
   const player = useClipPlayer(clip.audioUrl, round.unlocked, clip.startAt ?? 0);
   useSpaceToggle(player.toggle, player.ready);
   const [value, setValue] = useState("");
@@ -56,7 +58,7 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
   // lands on a boundary a player could actually have stopped at.
   const parNotes = notesAtLevel(round.ladder, clip.avgSolveLevel);
   const parTs = measured ? clip.noteEnds[parNotes - 1] : undefined;
-  const rate = solveRate(clip);
+  const rate = solveRate(clip, t);
 
   const misses = pending ? [...round.wrongGuesses, pending] : round.wrongGuesses;
 
@@ -83,10 +85,10 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
   };
 
   const skipLabel = round.nextNotes === null
-    ? "Give up"
+    ? t.daily.giveUp
     : round.nextNotes === round.total
-      ? `Skip · hear all ${round.total}`
-      : `Skip · hear ${round.nextNotes}/${round.total}`;
+      ? t.daily.skipToAll(round.total)
+      : t.daily.skipTo(round.nextNotes, round.total);
 
   return (
     <div className="daily">
@@ -96,7 +98,7 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
           <h2 className={`big${round.bumped ? " tick" : ""}`} aria-live="polite">
             {round.notes}<em>/{round.total}</em>
           </h2>
-          <span className="count-lab">notes unlocked</span>
+          <span className="count-lab">{t.daily.notesUnlocked}</span>
         </div>
 
         {/* Flanking play, the way every media player does it — near enough to the
@@ -106,7 +108,7 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
             className="seek"
             onClick={() => player.nudge(-NUDGE_S)}
             disabled={!player.ready}
-            aria-label={`Back ${NUDGE_S} seconds`}
+            aria-label={t.daily.seekBack(NUDGE_S)}
           >
             -{NUDGE_S}s
           </button>
@@ -115,7 +117,7 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
             className={`play${player.playing ? " on" : ""}`}
             onClick={player.toggle}
             disabled={!player.ready}
-            aria-label={player.playing ? "Pause" : "Play"}
+            aria-label={player.playing ? t.daily.pause : t.daily.play}
           >
             {player.playing ? <PauseIcon /> : <PlayIcon />}
           </button>
@@ -124,7 +126,7 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
             className="seek"
             onClick={() => player.nudge(NUDGE_S)}
             disabled={!player.ready}
-            aria-label={`Forward ${NUDGE_S} seconds`}
+            aria-label={t.daily.seekForward(NUDGE_S)}
           >
             +{NUDGE_S}s
           </button>
@@ -144,24 +146,24 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
       {/* Enough to frame the guess, not enough to narrow it. Sits against the input
           rather than up by the count, so it reads as a hint while you type. */}
       <div className="tags">
-        <span className="tag-chip tag-chip--cat">{clip.category}</span>
+        <span className="tag-chip tag-chip--cat">{t.categories[clip.category]}</span>
         {measured && (
           <span
             className="tag-chip tag-chip--diff"
             data-step={difficultyStep(round.ladder, clip.avgSolveLevel)}
           >
-            Difficulty: {difficultyFor(round.ladder, clip.avgSolveLevel)}
+            {t.daily.difficulty(t.difficulties[difficultyFor(round.ladder, clip.avgSolveLevel)])}
           </span>
         )}
       </div>
 
       {/* Credit before the tune is guessed: the whistler is not the answer. */}
-      <p className="credit">{whistlerCredit(clip)}</p>
+      <p className="credit">{whistlerCredit(clip, t)}</p>
 
       {/* An invitation rather than a zero when the day is untouched: "0 of 0
           players have found it" reads as "this one is impossible". */}
       <p className={`solve-rate${rate ? "" : " solve-rate--invite"}`}>
-        {rate ?? "Be the first to find today's tune!"}
+        {rate ?? t.daily.beTheFirst}
       </p>
 
       <div className="guess-field">
@@ -172,14 +174,14 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
           type="text"
           value={value}
           disabled={locked}
-          placeholder="Name that tune"
+          placeholder={t.daily.guessPlaceholder}
           autoComplete="off"
           spellCheck={false}
-          aria-label="Your guess"
+          aria-label={t.daily.guessLabel}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
         />
-        <button className="btn-go" onClick={submit} disabled={!value.trim() || locked} aria-label="Guess">
+        <button className="btn-go" onClick={submit} disabled={!value.trim() || locked} aria-label={t.daily.guessSubmit}>
           <GoIcon />
         </button>
       </div>
@@ -187,7 +189,7 @@ export function Daily({ clip, round }: { clip: DailyClip; round: Round }) {
       <div className="under">
         <button className="btn-skip" onClick={round.skip}>{skipLabel}</button>
         {misses.length > 0 && (
-          <p className="misses" aria-live="polite" aria-label="Wrong guesses so far">
+          <p className="misses" aria-live="polite" aria-label={t.daily.wrongGuessesLabel}>
             {misses.map((g, i) => (
               <span key={`${g}-${i}`} className={i === misses.length - 1 ? "last" : ""}>
                 ✕ <s>{g}</s>

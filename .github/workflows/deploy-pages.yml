@@ -50,10 +50,10 @@ jobs:
           # booth's upload button; the daily is unaffected by design.
           VITE_INGEST_URL: ${{ vars.VITE_INGEST_URL }}
 
-      # App.tsx routes on location.pathname, so /booth must survive a direct hit
-      # or a refresh. Pages serves 404.html for unknown paths with the URL intact,
-      # which is all the app needs to render the right screen.
-      - run: cp dist/index.html dist/404.html
+      # `npm run build` also writes dist/404.html and the two language roots —
+      # see client/scripts/lang-roots.mjs. That used to be a `cp` here, and it
+      # moved into the build so that `npm run build` locally produces the same
+      # tree Pages serves, rather than one this file quietly patches afterwards.
 
       - uses: actions/upload-pages-artifact@v3
         with:

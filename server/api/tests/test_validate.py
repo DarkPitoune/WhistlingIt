@@ -2,7 +2,7 @@ import pytest
 
 pytest.importorskip("whistle", reason="whistle-pipeline not installed")
 
-from app.ingest import BadRequest, Submission, validate  # noqa: E402
+from app.ingest import BadRequest, Submission, lang_of, validate  # noqa: E402
 
 
 def sub(**kw):
@@ -92,6 +92,36 @@ def test_signature_at_the_limit_accepted():
 def test_long_signature_rejected():
     with pytest.raises(BadRequest):
         validate(sub(signature="s" * 81))
+
+
+def test_lang_comes_from_the_booth():
+    assert lang_of(sub(lang="fr")) == "fr"
+    assert lang_of(sub(lang="en")) == "en"
+
+
+def test_lang_is_case_and_space_insensitive():
+    """The field is machine-set, but it arrives as form text like every other."""
+    assert lang_of(sub(lang="  EN ")) == "en"
+
+
+def test_missing_lang_is_french():
+    """A booth bundle predating the split still uploads, into the pool it was
+    always uploading into. Matches the column default."""
+    assert lang_of(sub(lang=None)) == "fr"
+    assert lang_of(sub(lang="   ")) == "fr"
+    # And a Submission built without the field at all, as older callers do.
+    assert lang_of(Submission(
+        title="x", accepted_answers=[], category=None,
+        from_label=None, signature=None,
+    )) == "fr"
+
+
+def test_unknown_lang_rejected():
+    """Not defaulted: 'de' is a client bug, and filing it under French would
+    hide the bug behind a song sitting in the wrong game."""
+    for bad in ("de", "french", "fr-CA", "FR,EN"):
+        with pytest.raises(BadRequest):
+            lang_of(sub(lang=bad))
 
 
 def test_blank_signature_collapses_to_none():

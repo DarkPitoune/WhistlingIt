@@ -54,18 +54,27 @@ const ok = (cond, label, detail = "") => {
   if (!cond) failed++;
 };
 
+// Which game to walk. There are two pools now, and the English one starts empty,
+// so the useful default is the one that has songs in it — pass `en` to walk the
+// other side once it does.
+const LANG = process.argv[2] ?? "fr";
+if (LANG !== "fr" && LANG !== "en") {
+  console.error(`usage: check-play-flow [fr|en] — got ${LANG}`);
+  process.exit(2);
+}
+
 // ── 1. the one call the game makes ────────────────────────────────────────────
 const res = await fetch(`${URL_}/rest/v1/rpc/get_daily`, {
   method: "POST",
   headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
-  body: "{}",
+  body: JSON.stringify({ l: LANG }),
 });
-ok(res.ok, `POST /rest/v1/rpc/get_daily`, `HTTP ${res.status}`);
+ok(res.ok, `POST /rest/v1/rpc/get_daily(${LANG})`, `HTTP ${res.status}`);
 if (!res.ok) process.exit(1);
 
 const row = await res.json();
 if (row === null) {
-  console.log("\n  get_daily() returned null — the pool is empty, so there is no round to walk.");
+  console.log(`\n  get_daily('${LANG}') returned null — that pool is empty, so there is no round.`);
   console.log("  Upload a whistle through the booth, or run ../server/supabase/seed.sql locally.");
   process.exit(1);
 }

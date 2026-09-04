@@ -1,3 +1,5 @@
+import type { Lang } from "../i18n/lang";
+import { type Strings, stringsFor } from "../i18n/strings";
 import type { Database } from "./database.types";
 import type {
   Category,
@@ -164,28 +166,29 @@ async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T
 }
 
 export const liveApi: WhistlingApi = {
-  async getDaily(): Promise<DailyClip> {
-    const row = await rpc<DailyRow | null>("get_daily");
+  async getDaily(lang: Lang): Promise<DailyClip> {
+    const row = await rpc<DailyRow | null>("get_daily", { l: lang });
     if (!row) {
-      // Not an error: the pool is genuinely empty, which is day one. App.tsx
-      // renders this under "No whistle today".
-      throw new Error("Nobody has whistled yet. The booth is open.");
+      // Not an error: the pool is genuinely empty, which is day one on this
+      // side. App.tsx renders this under "No whistle today".
+      throw new Error(stringsFor(lang).emptyPool);
     }
     return toClip(row);
   },
 
-  async getByDate(date: string): Promise<DailyClip | null> {
+  async getByDate(date: string, lang: Lang): Promise<DailyClip | null> {
     // Null means "nothing was pinned for that day", which is most of the
     // calendar. The server also returns null for a future date rather than
     // letting tomorrow's puzzle be read early.
-    const row = await rpc<DailyRow | null>("get_daily_on", { d: date });
+    const row = await rpc<DailyRow | null>("get_daily_on", { d: date, l: lang });
     return row ? toClip(row) : null;
   },
 
-  async getPuzzleDays(from: string, to: string) {
+  async getPuzzleDays(from: string, to: string, lang: Lang) {
     const r = await rpc<{ first: string | null; days: string[] }>("calendar_days", {
       d_from: from,
       d_to: to,
+      l: lang,
     });
     // Postgres renders a date as YYYY-MM-DD, which is already the key format the
     // rest of the client uses, so these pass through untouched.
@@ -211,7 +214,8 @@ export const liveApi: WhistlingApi = {
   },
 
   async upload(draft: UploadDraft): Promise<UploadReceipt> {
-    if (!INGEST_URL) throw new Error("The booth is not configured (VITE_INGEST_URL).");
+    const t = stringsFor(draft.lang);
+    if (!INGEST_URL) throw new Error(t.upload.boothNotConfigured);
 
     const form = new FormData();
     // The extension is a hint only: the API transcodes whatever arrives.
@@ -220,6 +224,10 @@ export const liveApi: WhistlingApi = {
     if (draft.from) form.append("from_label", draft.from);
     form.append("category", draft.category);
     form.append("signature", draft.signature);
+    // Which pool the song joins. The API also defaults a missing value to
+    // French, for the booth bundle that predates the split — but this is the
+    // path that actually decides it, and an English booth must always say so.
+    form.append("lang", draft.lang);
     // Repeated field, one value per accepted answer. The API normalises them and
     // stores both the raw and normalised forms.
     for (const a of draft.accepted) form.append("accepted_answers", a);
@@ -228,11 +236,34 @@ export const liveApi: WhistlingApi = {
     // the transcoded file and its answer is the one that becomes the puzzle, so
     // the booth no longer measures anything to send.
 
-    const res = await fetch(`${INGEST_URL}/uploads`, { method: "POST", body: form });
+    /*
+     * A rejected fetch is not the same failure as an error status, and the
+     * difference matters to the person holding the recording.
+     *
+     * An HTTP error means the booth looked at the take and said no. A rejected
+     * fetch means we never heard back — offline, a dropped connection, or a
+     * CORS response the browser refused to hand over. In that last case the
+     * request was *delivered and processed*: a multipart POST with no custom
+     * headers is CORS-safelisted, so there is no preflight to stop it, and only
+     * the reply is withheld. The take is very likely in the pool already.
+     *
+     * So this cannot be left to fall through to the caller, which would put the
+     * browser's own words — "Failed to fetch", or "Load failed" on Safari — in
+     * a toast, in English, on either side of the site, and call it a failure.
+     * The whistler's next move is to check, not to record it all over again.
+     */
+    let res: Response;
+    try {
+      res = await fetch(`${INGEST_URL}/uploads`, { method: "POST", body: form });
+    } catch (cause) {
+      // The original is kept on `cause` rather than in the message: the console
+      // still gets "Failed to fetch", the toast does not.
+      throw new Error(t.upload.lostContact, { cause });
+    }
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      throw new Error(uploadError(res.status, body));
+      throw new Error(uploadError(res.status, body, t));
     }
 
     const { id } = (await res.json()) as { id: string; n_notes: number };
@@ -241,40 +272,38 @@ export const liveApi: WhistlingApi = {
   },
 };
 
-/** Plain language for the ingest API's failure taxonomy. */
-function uploadError(status: number, body: { error?: string; reasons?: string[]; detail?: string } | null): string {
-  if (status === 413) return "That recording is too big. Keep it under 10 MB.";
+/**
+ * Plain language for the ingest API's failure taxonomy, in the booth's language.
+ *
+ * The API's own `detail` on a 400 is the one string here that stays English: it
+ * is a validation message about a field ("title is too long"), written on the
+ * server, and there is no vocabulary of codes to translate it through. Rare
+ * enough to live with, and better than dropping the only specific thing the
+ * server said.
+ */
+function uploadError(
+  status: number,
+  body: { error?: string; reasons?: string[]; detail?: string } | null,
+  t: Strings,
+): string {
+  if (status === 413) return t.upload.tooBig;
 
   if (status === 422 && body?.reasons?.length) {
-    return body.reasons.map(reasonText).join(" ");
+    return body.reasons.map((r) => reasonText(r, t)).join(" ");
   }
 
   if (status === 400) {
-    if (body?.error === "bad_audio") return "We couldn't read that recording. Try again.";
-    return body?.detail ?? "Something in the labels wasn't right.";
+    if (body?.error === "bad_audio") return t.upload.badAudio;
+    return body?.detail ?? t.upload.badLabels;
   }
 
-  return "Upload failed. Your take is still here — try again.";
+  return t.upload.generic;
 }
 
 /** The gate's machine-readable reasons, as something a person can act on. */
-function reasonText(reason: string): string {
-  switch (reason) {
-    case "not_whistle_like":
-      return "That doesn't sound like a whistle — humming and recordings don't pass.";
-    case "too_few_notes":
-      return "Too short to guess from. Whistle a few more notes.";
-    case "too_many_notes":
-      return "That's a long one. Trim it to a recognisable phrase.";
-    case "too_short":
-      return "That's too short.";
-    case "too_long":
-      return "That's over 40 seconds. Trim it to the tune.";
-    case "clipping":
-      return "It's clipping. Move back from the mic and try again.";
-    case "not_enough_voiced_audio":
-      return "Mostly silence or noise. Get closer to the mic.";
-    default:
-      return "We couldn't use that take.";
-  }
+function reasonText(reason: string, t: Strings): string {
+  const reasons = t.upload.reasons;
+  return reason in reasons
+    ? reasons[reason as keyof typeof reasons]
+    : reasons.unknown;
 }

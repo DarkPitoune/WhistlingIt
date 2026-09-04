@@ -3,6 +3,7 @@ import type { Category, UploadDraft } from "../api";
 import { PauseIcon, PlayIcon } from "../components/icons";
 import { getContext, setAudioSession } from "../audio/context";
 import { useClipPlayer } from "../audio/useClipPlayer";
+import { useI18n } from "../i18n/useI18n";
 
 const CATEGORIES: Category[] = ["Film", "TV Series", "Video Games", "Jingle", "Music"];
 
@@ -25,6 +26,10 @@ export function Booth({
   /** Fires the upload. Returns nothing: the outcome arrives as a toast. */
   onSubmit: (draft: UploadDraft) => void;
 }) {
+  // The side is the booth's own, from the URL. There is no field for it: a
+  // whistler standing in the French booth is not the right person to ask which
+  // pool their recording belongs in, and where they are standing already says.
+  const { lang, t } = useI18n();
   const [take, setTake] = useState<Take | null>(null);
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -85,7 +90,7 @@ export function Booth({
       const buffer = await getContext().decodeAudioData(await blob.arrayBuffer());
       replaceTake({ blob, duration: buffer.duration, url: URL.createObjectURL(blob) });
     } catch {
-      setError("Couldn't read that audio. Try a wav, mp3, m4a or ogg file.");
+      setError(t.booth.unreadableAudio);
     }
   };
 
@@ -108,7 +113,7 @@ export function Booth({
       setElapsed(0);
       setRecording(true);
     } catch {
-      setError("No microphone. You can upload a file instead.");
+      setError(t.booth.noMicrophone);
     }
   };
 
@@ -157,6 +162,7 @@ export function Booth({
       category,
       accepted: [title.trim(), ...accepted],
       signature: signature.trim(),
+      lang,
     });
     setSent(true);
   };
@@ -181,17 +187,14 @@ export function Booth({
     return (
       <div className="booth">
         <div className="booth-done">
-          <span className="res-kicker">Sent</span>
+          <span className="res-kicker">{t.booth.sentKicker}</span>
           <h2 className="res-title">{title}</h2>
-          <p className="res-from">
-            We're processing it now — listening for the notes and checking it's a whistle.
-            You'll get a notice when it's done!
-          </p>
+          <p className="res-from">{t.booth.sentBody}</p>
         </div>
         <button className="booth-submit" type="button" onClick={startAnother}>
-          Whistle another one
+          {t.booth.whistleAnother}
         </button>
-        <button className="btn-skip" onClick={onLeave}>Back to the daily</button>
+        <button className="btn-skip" onClick={onLeave}>{t.nav.backToDaily}</button>
       </div>
     );
   }
@@ -199,38 +202,38 @@ export function Booth({
   return (
     <div className="booth">
       <div className="booth-head">
-        <h3>New whistle</h3>
+        <h3>{t.booth.heading}</h3>
       </div>
 
       <div className="rec">
         <button
           className={`rec-btn${recording ? " on" : ""}`}
           onClick={recording ? stopRecording : startRecording}
-          aria-label={recording ? "Stop recording" : "Start recording"}
+          aria-label={recording ? t.booth.stopRecording : t.booth.startRecording}
         />
         {recording ? (
-          <p className="rec-timer">{elapsed.toFixed(1)}s · tap to stop</p>
+          <p className="rec-timer">{t.booth.tapToStop(elapsed.toFixed(1))}</p>
         ) : (
           <p>
-            <strong>{take ? "Take recorded" : "Tap to whistle"}</strong>
-            <small>{take ? `${take.duration.toFixed(1)} seconds` : "10–30 seconds is plenty"}</small>
+            <strong>{take ? t.booth.takeRecorded : t.booth.tapToWhistle}</strong>
+            <small>{take ? t.booth.seconds(take.duration.toFixed(1)) : t.booth.lengthHint}</small>
           </p>
         )}
         {take && !recording && (
           <button className="btn-replay" onClick={player.toggle} disabled={!player.ready}>
             {player.playing ? <PauseIcon /> : <PlayIcon />}
-            {player.playing ? "Playing your take" : "Hear your take"}
+            {player.playing ? t.booth.playingYourTake : t.booth.hearYourTake}
           </button>
         )}
 
         {/* Both of these are about getting a take, so they sit with the recorder. */}
         <div className="rec-actions">
           <button className="rec-file" onClick={() => fileInput.current?.click()}>
-            Upload a file instead
+            {t.booth.uploadFileInstead}
           </button>
           {take && !recording && (
             <button className="rec-file" onClick={() => replaceTake(null)}>
-              Record another audio
+              {t.booth.recordAnother}
             </button>
           )}
         </div>
@@ -252,23 +255,23 @@ export function Booth({
       {take && (
         <>
           <div className="field">
-            <label htmlFor="upTitle">Title</label>
+            <label htmlFor="upTitle">{t.booth.title}</label>
             <input id="upTitle" type="text" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
           <div className="field">
-            <label htmlFor="upFrom">From</label>
+            <label htmlFor="upFrom">{t.booth.from}</label>
             <input
               id="upFrom"
               type="text"
               value={from}
-              placeholder="Film, artist, whatever places it"
+              placeholder={t.booth.fromPlaceholder}
               onChange={(e) => setFrom(e.target.value)}
             />
           </div>
 
           <div className="field">
-            <span className="field-label" id="catLabel">Category</span>
+            <span className="field-label" id="catLabel">{t.booth.category}</span>
             <div className="pickers" role="group" aria-labelledby="catLabel">
               {CATEGORIES.map((c) => (
                 <button
@@ -278,19 +281,21 @@ export function Booth({
                   aria-pressed={category === c}
                   onClick={() => setCategory(c)}
                 >
-                  {c}
+                  {/* The chip shows the translated label; `c` stays the English
+                      enum value, which is what the API validates. */}
+                  {t.categories[c]}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="field">
-            <label htmlFor="aliasIn">Accepted answers</label>
+            <label htmlFor="aliasIn">{t.booth.acceptedAnswers}</label>
             <div className="alias">
               {accepted.map((a) => (
                 <span key={a}>
                   {a}
-                  <button type="button" aria-label={`Remove ${a}`}
+                  <button type="button" aria-label={t.booth.removeAlias(a)}
                           onClick={() => setAccepted(accepted.filter((x) => x !== a))}>×</button>
                 </span>
               ))}
@@ -299,7 +304,7 @@ export function Booth({
               id="aliasIn"
               type="text"
               value={aliasDraft}
-              placeholder="Type one, then press Enter"
+              placeholder={t.booth.aliasPlaceholder}
               onChange={(e) => setAliasDraft(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addAliases(aliasDraft); }
@@ -307,15 +312,11 @@ export function Booth({
               // Tabbing or clicking away shouldn't quietly discard what's typed.
               onBlur={() => addAliases(aliasDraft)}
             />
-            <p className="hint">
-              One answer at a time — press <b>Enter</b> or type a comma after each. The title
-              already counts, so add other spellings, languages or nicknames. A guess wins if it
-              matches any one of them.
-            </p>
+            <p className="hint">{t.booth.aliasHint}</p>
           </div>
 
           <div className="field">
-            <label htmlFor="upSignature">Sign your whistle!</label>
+            <label htmlFor="upSignature">{t.booth.signature}</label>
             <input
               id="upSignature"
               type="text"
@@ -323,7 +324,7 @@ export function Booth({
               maxLength={80}
               // Optionality lives in the placeholder rather than a hint line:
               // the eye is already here, and the field is meant to feel light.
-              placeholder="Your name — or leave blank to stay anonymous"
+              placeholder={t.booth.signaturePlaceholder}
               onChange={(e) => setSignature(e.target.value)}
             />
           </div>
@@ -337,7 +338,7 @@ export function Booth({
             disabled={!canSubmit}
             onClick={submit}
           >
-            Send to the queue
+            {t.booth.send}
           </button>
         </>
       )}

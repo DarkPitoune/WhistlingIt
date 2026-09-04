@@ -1,5 +1,6 @@
 import type { TryKind } from "../api";
 import { today } from "../api/day";
+import type { Lang } from "../i18n/lang";
 
 /**
  * Everything here is device-local. Streaks imply identity, and we start without
@@ -10,16 +11,48 @@ import { today } from "../api/day";
  * `puzzle_date` on the server. Keying on the device's local date would file a
  * result under a day the server has not reached and, for anyone outside the
  * zone, put it in the wrong square on the calendar.
+ *
+ * ── two of everything ──────────────────────────────────────────────────────
+ * `fr` and `en` are separate games with separate song pools, so they get
+ * separate stores: two round maps, two streaks, two backfill flags. Sharing a
+ * streak across them would let a player keep a run alive by switching sides on a
+ * day they missed, and sharing the round map would file both days under one date
+ * key — which is the same key, since the two puzzles rotate together.
+ *
+ * Every function below therefore takes the side. None of them defaults it: the
+ * argument is the only thing standing between a French player's history and an
+ * English one's, and a default is how that gets forgotten at one call site.
  */
 
-const ROUNDS_KEY = "whistlingit.rounds";
-const STREAK_KEY = "whistlingit.streak";
+/**
+ * `whistlingit.rounds.fr`, `whistlingit.streak.en`, and so on.
+ *
+ * Suffixed rather than nested under one object, so the two sides can never be
+ * lost together by one bad write, and so the migration below is a copy rather
+ * than a restructure.
+ */
+const roundsKey = (lang: Lang) => `whistlingit.rounds.${lang}`;
+const streakKey = (lang: Lang) => `whistlingit.streak.${lang}`;
+const backfillKey = (lang: Lang) => `whistlingit.backfilled.${lang}`;
 
-/** The pre-calendar store: one round, overwritten daily. Migrated on first read. */
-const LEGACY_ROUND_KEY = "whistlingit.round";
+/**
+ * The unsuffixed keys, from when there was only one game.
+ *
+ * All French: the site was French-facing for its whole life before the split, so
+ * every round and every streak sitting in these keys was earned on the French
+ * pool. They are copied across on first read and then left alone — see
+ * `migrateToFrench`.
+ */
+const PRE_SPLIT_KEYS = {
+  rounds: "whistlingit.rounds",
+  streak: "whistlingit.streak",
+  /** The pre-calendar store: one round, overwritten daily. */
+  round: "whistlingit.round",
+  backfilled: "whistlingit.backfilled",
+} as const;
 
-/** Set once the streak backfill below has run, so it never runs twice. */
-const BACKFILL_KEY = "whistlingit.backfilled";
+/** Set once the copy below has run, so it never runs twice. */
+const SPLIT_KEY = "whistlingit.split";
 
 /**
  * The clip id on a round we inferred rather than watched.
@@ -67,17 +100,54 @@ function write(key: string, value: unknown): void {
 }
 
 /**
- * All saved rounds, folding in the single round the old key may still hold.
+ * Move the pre-split history onto the French side.
  *
- * The migration is read-only until something is saved, so a visit that changes
- * nothing leaves both keys alone. The legacy key is never deleted: it costs a few
- * bytes, and keeping it means downgrading to an older build doesn't lose the day.
+ * Runs once, before the first read of either side, and copies rather than moves:
+ * the unsuffixed keys stay exactly where they are. That costs a few kilobytes
+ * and buys two things — rolling the deploy back doesn't lose anyone's streak,
+ * and a bug in the copy is recoverable because the original is still there.
+ *
+ * The backfill flag comes along too, and that part is load-bearing. Without it
+ * the streak backfill from the previous release would run a second time on the
+ * French store, re-deducing wins for days the player has since replayed and
+ * lost, and quietly repainting those squares green.
+ *
+ * Nothing is copied to English. There is no English history to have: the pool
+ * starts empty, so its first round is genuinely its first.
  */
-export function loadRounds(): Rounds {
-  const rounds = read<Rounds>(ROUNDS_KEY) ?? {};
-  const legacy = read<SavedRound>(LEGACY_ROUND_KEY);
-  if (legacy?.date && !rounds[legacy.date]) rounds[legacy.date] = legacy;
-  backfill(rounds);
+function migrateToFrench(): void {
+  if (read<boolean>(SPLIT_KEY)) return;
+
+  // The flag goes down first. If a quota error stops one of the writes below,
+  // a retry on the next page load would be the worse outcome: the copy is not
+  // idempotent once the player has started winning on the French keys.
+  write(SPLIT_KEY, true);
+
+  const rounds = read<Rounds>(PRE_SPLIT_KEYS.rounds);
+  const streak = read<StreakRecord>(PRE_SPLIT_KEYS.streak);
+  const legacy = read<SavedRound>(PRE_SPLIT_KEYS.round);
+  const backfilled = read<boolean>(PRE_SPLIT_KEYS.backfilled);
+
+  const merged: Rounds = { ...(rounds ?? {}) };
+  // Fold in the one round the pre-calendar key may still hold, same rule as
+  // before: a round we have in the map wins over the single overwritten one.
+  if (legacy?.date && !merged[legacy.date]) merged[legacy.date] = legacy;
+
+  if (Object.keys(merged).length) write(roundsKey("fr"), merged);
+  if (streak) write(streakKey("fr"), streak);
+  if (backfilled) write(backfillKey("fr"), true);
+}
+
+/**
+ * All saved rounds for one side.
+ *
+ * Reads are what trigger the one-off migration, so there is no separate startup
+ * step to forget to call — every path into this module comes through here.
+ */
+export function loadRounds(lang: Lang): Rounds {
+  migrateToFrench();
+  const rounds = read<Rounds>(roundsKey(lang)) ?? {};
+  backfill(rounds, lang);
   return rounds;
 }
 
@@ -104,10 +174,10 @@ export function loadRounds(): Rounds {
  * earned on days the game actually set one, so the recovered dates are real
  * puzzle dates by construction and can't light up a dead square.
  */
-function backfill(rounds: Rounds): void {
-  if (read<boolean>(BACKFILL_KEY)) return;
+function backfill(rounds: Rounds, lang: Lang): void {
+  if (read<boolean>(backfillKey(lang))) return;
 
-  const found = recoveredWins(read<StreakRecord>(STREAK_KEY), rounds);
+  const found = recoveredWins(read<StreakRecord>(streakKey(lang)), rounds);
   for (const r of found) rounds[r.date] = r;
 
   /*
@@ -117,8 +187,8 @@ function backfill(rounds: Rounds): void {
    * next time the calendar opened — the inferred history overwriting the real
    * one, forever. Once is the whole idea.
    */
-  write(BACKFILL_KEY, true);
-  if (found.length) write(ROUNDS_KEY, rounds);
+  write(backfillKey(lang), true);
+  if (found.length) write(roundsKey(lang), rounds);
 }
 
 /**
@@ -174,22 +244,22 @@ export const isRecovered = (r: SavedRound): boolean =>
  * that date turns out to hold. Excluding it would leave the calendar showing a
  * solved day that opens as an untouched puzzle.
  */
-export function loadRound(date: string, clipId: string): SavedRound | null {
-  const r = loadRounds()[date];
+export function loadRound(date: string, clipId: string, lang: Lang): SavedRound | null {
+  const r = loadRounds(lang)[date];
   if (!r) return null;
   return r.clipId === clipId || isRecovered(r) ? r : null;
 }
 
-export function saveRound(r: SavedRound): void {
-  const rounds = loadRounds();
+export function saveRound(r: SavedRound, lang: Lang): void {
+  const rounds = loadRounds(lang);
   rounds[r.date] = r;
-  write(ROUNDS_KEY, rounds);
+  write(roundsKey(lang), rounds);
 }
 
 /** Finished rounds only, as date → won. What the calendar colours its squares by. */
-export function loadResults(): Record<string, boolean> {
+export function loadResults(lang: Lang): Record<string, boolean> {
   const out: Record<string, boolean> = {};
-  for (const [date, r] of Object.entries(loadRounds())) {
+  for (const [date, r] of Object.entries(loadRounds(lang))) {
     if (r.done) out[date] = r.done.won;
   }
   return out;
@@ -206,14 +276,15 @@ export function loadResults(): Record<string, boolean> {
  * Read fresh rather than cached, because the round that satisfies it is usually
  * finished in this same session.
  */
-export function finishedToday(): boolean {
-  return !!loadRounds()[today()]?.done;
+export function finishedToday(lang: Lang): boolean {
+  return !!loadRounds(lang)[today()]?.done;
 }
 
 export interface StreakRecord { count: number; lastWon: string | null }
 
-export function loadStreak(): number {
-  const s = read<StreakRecord>(STREAK_KEY);
+export function loadStreak(lang: Lang): number {
+  migrateToFrench();
+  const s = read<StreakRecord>(streakKey(lang));
   if (!s || !s.lastWon) return 0;
   // Shown as live only while it could still be extended: today or yesterday.
   return daysBetween(s.lastWon, today()) <= 1 ? s.count : 0;
@@ -226,19 +297,20 @@ export function loadStreak(): number {
  * letting those count would turn the streak into something you can repair after
  * the fact — so a back-filled day is recorded and coloured, but never counted.
  */
-export function recordResult(won: boolean, date: string): number {
+export function recordResult(won: boolean, date: string, lang: Lang): number {
   const day = today();
-  const s = read<StreakRecord>(STREAK_KEY) ?? { count: 0, lastWon: null };
-  if (date !== day) return loadStreak();
+  migrateToFrench();
+  const s = read<StreakRecord>(streakKey(lang)) ?? { count: 0, lastWon: null };
+  if (date !== day) return loadStreak(lang);
 
   if (!won) {
-    write(STREAK_KEY, { count: 0, lastWon: s.lastWon });
+    write(streakKey(lang), { count: 0, lastWon: s.lastWon });
     return 0;
   }
   if (s.lastWon === day) return s.count;   // already counted this day
   const carry = s.lastWon && daysBetween(s.lastWon, day) === 1 ? s.count : 0;
   const next = carry + 1;
-  write(STREAK_KEY, { count: next, lastWon: day });
+  write(streakKey(lang), { count: next, lastWon: day });
   return next;
 }
 

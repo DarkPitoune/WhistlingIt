@@ -93,6 +93,9 @@ async def create_upload(
     from_label: Annotated[str | None, Form()] = None,
     # Optional: an unsigned whistle is credited to nobody rather than refused.
     signature: Annotated[str | None, Form()] = None,
+    # Which booth, and so which of the two games the song joins. Optional only
+    # for the booth bundle that predates the split — see ingest.lang_of.
+    lang: Annotated[str | None, Form()] = None,
 ):
     with tempfile.TemporaryDirectory() as tmp:
         original = Path(tmp) / "upload.bin"
@@ -115,6 +118,7 @@ async def create_upload(
             category=category,
             from_label=from_label,
             signature=signature,
+            lang=lang,
         )
 
         try:

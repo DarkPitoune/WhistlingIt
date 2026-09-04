@@ -6,6 +6,8 @@
  * swap it in src/api/index.ts. These types are the spec to build against.
  */
 
+import type { Lang } from "../i18n/lang";
+
 /**
  * Must stay in step with CATEGORIES in server/api/app/config.py, which is what
  * actually validates an upload — the client sending a value the API doesn't know
@@ -136,6 +138,14 @@ export interface UploadDraft {
    * "Anonymous Whistler". Only the length is enforced, server-side.
    */
   signature: string;
+  /**
+   * Which game the song joins, and so which booth it came from.
+   *
+   * Set from the URL, never from a field on the form: "which pool is this for"
+   * is not a question a whistler standing in the French booth should be asked,
+   * and the answer is already unambiguous from where they are standing.
+   */
+  lang: Lang;
 }
 
 export interface UploadReceipt {
@@ -143,8 +153,19 @@ export interface UploadReceipt {
   status: "queued";
 }
 
+/**
+ * Every read takes the side, because there are two games behind this.
+ *
+ * Not defaulted anywhere. A missing `lang` would resolve to French server-side —
+ * the RPCs default it so an in-flight old bundle keeps working — which means a
+ * forgotten argument on the English site would silently serve French puzzles
+ * rather than fail. Making it required is what turns that into a type error.
+ *
+ * `submitRound` is the exception and takes none: the song id already determines
+ * the side, and `record_round` looks it up rather than trusting the caller.
+ */
 export interface WhistlingApi {
-  getDaily(): Promise<DailyClip>;
+  getDaily(lang: Lang): Promise<DailyClip>;
   /**
    * The puzzle for a past date, or null when that day was never pinned.
    *
@@ -152,17 +173,19 @@ export interface WhistlingApi {
    * played — so it is a value, not an error. Future dates are refused
    * server-side, which is what stops tomorrow's puzzle being read early.
    */
-  getByDate(date: string): Promise<DailyClip | null>;
+  getByDate(date: string, lang: Lang): Promise<DailyClip | null>;
   /**
-   * Which days in `from`…`to` inclusive have a puzzle, and the first day the
-   * game ever ran. Both ends are YYYY-MM-DD, and `days` is sorted.
+   * Which days in `from`…`to` inclusive have a puzzle, and the first day this
+   * side ever ran. Both ends are YYYY-MM-DD, and `days` is sorted.
    *
    * One call per month drawn, rather than a `getByDate` per square. `first` is
-   * global, not scoped to the range — the calendar uses it to stop you paging
-   * back past the beginning, and it is the same answer whatever month you ask
-   * from. Null when no puzzle has ever been pinned, i.e. an empty database.
+   * not scoped to the range — the calendar uses it to stop you paging back past
+   * the beginning, and it is the same answer whatever month you ask from. It
+   * *is* scoped to the side, though: English began later than French, and its
+   * calendar should stop where its own history does. Null when this side has no
+   * puzzle at all, i.e. day one.
    */
-  getPuzzleDays(from: string, to: string): Promise<{ first: string | null; days: string[] }>;
+  getPuzzleDays(from: string, to: string, lang: Lang): Promise<{ first: string | null; days: string[] }>;
   submitRound(result: RoundResult): Promise<void>;
   upload(draft: UploadDraft): Promise<UploadReceipt>;
 }

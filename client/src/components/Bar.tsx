@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { useT } from "../i18n/useI18n";
 
 export interface BarProps {
   /** Full length of the clip in seconds. The bar always shows all of it. */
@@ -24,6 +25,7 @@ export interface BarProps {
  * guess-history list all come off the screen.
  */
 export function Bar({ duration, open, heard = 0, ticks = [], parTs, par, onSeek, showKnob }: BarProps) {
+  const t = useT();
   const trackRef = useRef<HTMLDivElement>(null);
   const [shake, setShake] = useState(false);
   const dragging = useRef(false);
@@ -90,11 +92,11 @@ export function Bar({ duration, open, heard = 0, ticks = [], parTs, par, onSeek,
           ? {
               role: "slider" as const,
               tabIndex: 0,
-              "aria-label": "Position in the whistle",
+              "aria-label": t.daily.barLabel,
               "aria-valuemin": 0,
               "aria-valuemax": Math.round(open),
               "aria-valuenow": Math.round(heard),
-              "aria-valuetext": `${heard.toFixed(1)} of ${open.toFixed(1)} seconds unlocked`,
+              "aria-valuetext": t.daily.barValueText(heard.toFixed(1), open.toFixed(1)),
             }
           : {})}
       >

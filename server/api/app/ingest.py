@@ -23,7 +23,7 @@ from whistle import analyze
 from whistle.audio import AudioError
 
 from . import supa, transcode
-from .config import CATEGORIES, MAX_DURATION_S
+from .config import CATEGORIES, DEFAULT_LANG, LANGS, MAX_DURATION_S
 from .normalize import normalize_all
 from .reveal import build_reveal
 
@@ -56,6 +56,26 @@ class Submission:
     # Who whistled it, if they said. Optional — an unsigned whistle is credited
     # to nobody, which the client renders as "Anonymous Whistler".
     signature: str | None
+    # Which booth this came from, and so which of the two games the song joins.
+    # None means an older booth bundle that predates the split; see `lang_of`.
+    lang: str | None = None
+
+
+def lang_of(sub: Submission) -> str:
+    """Which pool this song joins. Raises BadRequest on anything unrecognised.
+
+    Absent means French, matching the column default — a booth that has not
+    reloaded since the split still uploads successfully, into the pool it was
+    always uploading into. A *wrong* value is refused rather than defaulted,
+    though: 'de' is a client bug, and quietly filing it under French would hide
+    the bug behind a song in the wrong game.
+    """
+    if sub.lang is None or not sub.lang.strip():
+        return DEFAULT_LANG
+    lang = sub.lang.strip().lower()
+    if lang not in LANGS:
+        raise BadRequest(f"lang must be one of {', '.join(LANGS)}")
+    return lang
 
 
 def validate(sub: Submission) -> tuple[list[str], list[str]]:
@@ -104,6 +124,7 @@ def validate(sub: Submission) -> tuple[list[str], list[str]]:
 def ingest(upload: Path, sub: Submission) -> dict:
     """Returns {"id", "n_notes"}. Raises BadRequest / BadAudio / Rejected."""
     raw_answers, norm_answers = validate(sub)
+    lang = lang_of(sub)
 
     with tempfile.TemporaryDirectory() as tmp:
         served = Path(tmp) / "served.m4a"
@@ -140,6 +161,7 @@ def ingest(upload: Path, sub: Submission) -> dict:
             # Blank collapses to null: "" and "   " both mean unsigned, and
             # storing them would make the client test for three empty states.
             "signature": (sub.signature or "").strip() or None,
+            "lang": lang,
             "accepted_answers": raw_answers,
             "accepted_norm": norm_answers,
             "notes": payload["notes"],

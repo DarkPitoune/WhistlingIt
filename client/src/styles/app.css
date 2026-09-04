@@ -609,6 +609,49 @@ button { font: inherit; color: inherit; }
 }
 .countdown b { color: var(--ink); }
 
+/* Where you go after the round: the archive, and the other language's game.
+   Set apart by a rule rather than a card, and placed after the countdown on
+   purpose — you read "come back tomorrow", and then find out there is something
+   to do today. Neither may compete with the share button, which is what this
+   screen is for, so they are outlines rather than fills. */
+.after-actions {
+  border-top: 1px solid var(--rule-soft);
+  padding-top: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-after {
+  flex: 1 1 0;
+  /* Both buttons stay on the one line the design asks for, whatever the label
+     costs in French — "Version anglaise" is half again the width of "French
+     version". min-width:0 lets a flex item shrink below its content, which it
+     otherwise refuses to do, and the ellipsis is the last resort behind it. */
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1.5px solid var(--rule);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 9px 10px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.btn-after:hover { color: var(--ink); border-color: var(--ink); }
+/* The calendar is a stroked glyph and takes the text colour. The flags are 3:2
+   rather than square, so they get their own width. */
+.btn-after svg { width: 16px; flex: none; }
+.btn-after .flag { width: 18px; }
+
 /* Replay the clip in full, once the round is over. */
 .btn-replay {
   border: 1.5px solid var(--rule);

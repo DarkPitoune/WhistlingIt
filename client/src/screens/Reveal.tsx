@@ -3,11 +3,14 @@ import type { DailyClip } from "../api";
 import { msUntilNextDay, today } from "../api/day";
 import { Bar } from "../components/Bar";
 import { Tape, tapeText } from "../components/Tape";
-import { PauseIcon, PlayIcon } from "../components/icons";
+import { CalendarIcon, FlagFR, FlagGB, PauseIcon, PlayIcon } from "../components/icons";
 import { useClipPlayer } from "../audio/useClipPlayer";
 import { useSpaceToggle } from "../audio/useSpaceToggle";
 import { notesAtLevel, tuneEnd } from "../game/levels";
+import { type Lang, otherLang } from "../i18n/lang";
+import { useI18n } from "../i18n/useI18n";
 import { solveRate, whistlerCredit } from "../game/stats";
+import type { Strings } from "../i18n/strings";
 import type { Round } from "../game/useRound";
 
 /**
@@ -19,18 +22,28 @@ import type { Round } from "../game/useRound";
  * Hardcoded, not `location.origin`: the point of the last line is to tell someone
  * who has never played where to go, and a dev or preview origin pasted into a
  * group chat sends them nowhere. Matches client/public/CNAME.
+ *
+ * The language is in the path because the two sides have different tunes. A
+ * bare `whistling.it` would sort the reader by their own browser, which is the
+ * wrong answer for exactly the person a shared result is aimed at: someone whose
+ * phone is in English being told about a French puzzle they can't be shown.
  */
-const SHARE_URL = "https://whistling.it";
+const shareUrl = (lang: Lang) => `https://whistling.it/${lang}`;
 
 export function Reveal({
   clip,
   round,
   onCalendar,
+  onLang,
 }: {
   clip: DailyClip;
   round: Round;
   onCalendar?: () => void;
+  /** Cross to the other game. See the block under the countdown. */
+  onLang: (l: Lang) => void;
 }) {
+  const { lang, t } = useI18n();
+  const other = otherLang(lang);
   const won = round.done?.won ?? false;
   // The round is over, so the whole clip is unlocked.
   const player = useClipPlayer(clip.audioUrl, tuneEnd(clip), clip.startAt ?? 0);
@@ -55,7 +68,7 @@ export function Reveal({
     ...clip,
     solvedCount: clip.solvedCount + (round.justFinished && won ? 1 : 0),
     failedCount: clip.failedCount + (round.justFinished && !won ? 1 : 0),
-  });
+  }, t);
 
   /*
    * A day rebuilt from the old streak knows one thing — that it was solved — and
@@ -75,9 +88,9 @@ export function Reveal({
   const share = async () => {
     const text = [
       `WhistlingIt ${clip.date.slice(8)}/${clip.date.slice(5, 7)}`,
-      `${tapeText(round.tape, round.ladder.length, won)} ${verdict(won, round)}`,
+      `${tapeText(round.tape, round.ladder.length, won)} ${verdict(won, round, t)}`,
       `🔥 ${round.streak}`,
-      SHARE_URL,
+      shareUrl(lang),
     ].join("\n");
     try { await navigator.clipboard.writeText(text); } catch { /* clipboard denied */ }
     setCopied(true);
@@ -86,28 +99,25 @@ export function Reveal({
   return (
     <div className="reveal">
       <div className={`res-hero${won ? "" : " miss"}`}>
-        <span className="res-kicker">{won ? "Solved" : "Out of notes"}</span>
+        <span className="res-kicker">{won ? t.reveal.solved : t.reveal.outOfNotes}</span>
         <h2 className="res-title">{clip.title}</h2>
         <p className="res-from">{clip.from}</p>
         {/* Distinct from `from`, which is where the tune comes from — this is who
             whistled it. */}
-        <p className="res-by">{whistlerCredit(clip)}</p>
+        <p className="res-by">{whistlerCredit(clip, t)}</p>
       </div>
 
       {recovered ? (
-        <p className="res-recovered">
-          You solved this one before the calendar existed, so the round itself
-          wasn't kept — only that you got it.
-        </p>
+        <p className="res-recovered">{t.reveal.recovered}</p>
       ) : (
         <>
           <Tape tape={round.tape} rungs={round.ladder.length} won={won} />
           <p className="res-line">
-            <b>{won ? "got it on" : ""} {verdict(won, round)}</b>
+            <b>{won ? t.reveal.gotItOn : ""} {verdict(won, round, t)}</b>
             {/* Dropped when nobody has solved it: the payload's average is a fallback
                 at that point, and "most got it on 2" with no solvers is a fiction.
                 The player's own solve is not in these counts yet either. */}
-            {clip.solvedCount > 0 && <> · most got it on {notesAtLevel(round.ladder, clip.avgSolveLevel)}</>}
+            {clip.solvedCount > 0 && <> · {t.reveal.mostGotItOn(notesAtLevel(round.ladder, clip.avgSolveLevel))}</>}
           </p>
           {/* Its own line rather than a third clause: the one above is already two
               facts wide, and this one is about everybody else. */}
@@ -118,26 +128,47 @@ export function Reveal({
       {/* Now that the day is done, the whole tune is listenable. */}
       <button className="btn-replay" onClick={player.toggle} disabled={!player.ready}>
         {player.playing ? <PauseIcon /> : <PlayIcon />}
-        {player.playing ? "Playing the whole tune" : "Hear the whole tune"}
+        {player.playing ? t.reveal.playingWholeTune : t.reveal.hearWholeTune}
       </button>
       <Bar duration={tuneEnd(clip)} open={tuneEnd(clip)} heard={player.pos} showKnob />
 
       {/* No result to copy, and the offer to play it properly goes where the
           share button would have been — it is the thing to do on this screen. */}
       {recovered
-        ? <button className="btn-share" onClick={round.replay}>Play it again</button>
-        : <button className="btn-share" onClick={share}>{copied ? "Copied ✓" : "Copy result"}</button>}
-      <p className="countdown">Next whistle in <b>{countdown}</b></p>
-      {onCalendar && (
-        <button className="btn-skip" onClick={onCalendar}>See the other days</button>
-      )}
+        ? <button className="btn-share" onClick={round.replay}>{t.reveal.playItAgain}</button>
+        : <button className="btn-share" onClick={share}>{copied ? t.reveal.copied : t.reveal.copyResult}</button>}
+      <p className="countdown">{t.reveal.nextWhistleIn} <b>{countdown}</b></p>
+
+      {/*
+        The two ways on from here, on one line: more of this game, or the other
+        one. They pair because they are the same offer — "there is more to play"
+        — and separating them made the language switch look like a setting.
+
+        The crossing lives on this screen and nowhere else, on purpose: this is
+        the one moment the player is finished rather than mid-guess, so "there is
+        another one of these" is an offer rather than an interruption. A
+        persistent header switch would put it in front of someone three notes
+        into a tune, where changing pools throws the round away.
+      */}
+      <div className="after-actions">
+        {onCalendar && (
+          <button className="btn-after" onClick={onCalendar}>
+            <CalendarIcon />
+            {t.nav.otherDays}
+          </button>
+        )}
+        <button className="btn-after" onClick={() => onLang(other)}>
+          {other === "fr" ? <FlagFR /> : <FlagGB />}
+          {t.reveal.crossPromoCta}
+        </button>
+      </div>
     </div>
   );
 }
 
-function verdict(won: boolean, round: Round): string {
-  if (!won) return "missed it";
-  return `note ${round.notes}/${round.total}`;
+function verdict(won: boolean, round: Round, t: Strings): string {
+  if (!won) return t.reveal.missedIt;
+  return t.reveal.noteOf(round.notes, round.total);
 }
 
 /**

@@ -1,15 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  One entry, on purpose.
+  Two entries, one per game.
 
-  Every other path is client-side routing that GitHub Pages answers with a 404
-  status, and listing a URL that returns 404 is worse than not listing it: it
-  spends crawl budget and reports errors in Search Console. The daily changes
-  content at the same URL, which is what `daily` describes.
+  `/` is deliberately absent even though it returns 200: it is a client-side
+  redirect into one of the two below, decided from the browser's language, so it
+  is nobody's canonical URL. Everything deeper (/fr/booth, /en/calendar, a dated
+  round) is client-side routing that GitHub Pages answers with a 404 *status*,
+  and listing a URL that returns 404 is worse than not listing it — it spends
+  crawl budget and reports errors in Search Console. The two language roots are
+  the exception only because the deploy workflow writes a real index.html at
+  each of them; do not add anything below them until the hosting can return 200.
+
+  The `xhtml:link` triples say these are the same game in two languages rather
+  than duplicates of each other. They have to be reciprocal — every URL lists
+  both itself and its counterpart — or the annotation is ignored outright.
 -->
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://whistling.it/</loc>
+    <loc>https://whistling.it/fr</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://whistling.it/fr"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whistling.it/en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://whistling.it/en"/>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://whistling.it/en</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://whistling.it/fr"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://whistling.it/en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://whistling.it/en"/>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>

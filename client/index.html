@@ -14,6 +14,15 @@
 -->
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <!--
+  Everything below that names the game — title, description, canonical, the og:*
+  block — is rewritten per language by scripts/lang-roots.mjs when dist/fr and
+  dist/en are written, from the same dictionary the app renders from. What is
+  checked in here is the English wording, which is what the root and the 404
+  fallback keep; edit the copy in src/i18n/strings.ts, not here.
+
+  The script matches these tags with narrow regexes and throws if one stops
+  matching, so reformatting them is safe but renaming an attribute is not.
+
   The name is written both ways on purpose. People search "whistling it" with a
   space; the brand is one word. Both forms appear in the title and the
   description so the page matches either spelling.
@@ -21,9 +30,27 @@
 <title>WhistlingIt — Whistling It, the daily whistled tune game</title>
 <meta name="description" content="Whistling It is a daily guessing game where every clip is someone whistling the tune. You start with one note — every miss buys you another. A new whistle every day.">
 
-<!-- Absolute, and without a query string: the app puts dates and /booth in the
-     path, and every one of those should credit the same canonical page. -->
-<link rel="canonical" href="https://whistling.it/">
+<!--
+  Absolute, and without a query string. Every deep path — a date, /booth,
+  /calendar — is client-side routing over the same document, so they all credit
+  the language root they sit under rather than each becoming a thin page of its
+  own. The `id` is there because the value depends on which language root this
+  copy of the file is being served as, which only the script below knows.
+-->
+<link rel="canonical" id="canonical" href="https://whistling.it/en">
+
+<!--
+  Two games, two front doors, and a crawler has to be told they are the same
+  page in different languages rather than duplicates of each other. These are
+  static because they are the same three lines whichever copy is served.
+
+  `x-default` is the English root, not `/`: it is meant to be the page for a
+  reader whose language is neither, and `/` is a client-side redirect — pointing
+  an alternate at a URL that bounces is what Google tells you not to do.
+-->
+<link rel="alternate" hreflang="fr" href="https://whistling.it/fr">
+<link rel="alternate" hreflang="en" href="https://whistling.it/en">
+<link rel="alternate" hreflang="x-default" href="https://whistling.it/en">
 
 <meta name="theme-color" content="#E8E9F4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#101128" media="(prefers-color-scheme: dark)">
@@ -33,9 +60,11 @@
      pasted into a group chat. Without these a link unfurls as a bare URL. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="WhistlingIt">
-<meta property="og:url" content="https://whistling.it/">
-<meta property="og:title" content="Whistling It — the daily whistled tune game">
-<meta property="og:description" content="One tune a day, whistled. You start with one note; every miss buys you another. Can you name it?">
+<meta property="og:url" content="https://whistling.it/en">
+<meta property="og:title" content="WhistlingIt — Whistling It, the daily whistled tune game">
+<meta property="og:description" content="Whistling It is a daily guessing game where every clip is someone whistling the tune. You start with one note — every miss buys you another. A new whistle every day.">
+<!-- Rewritten to fr_FR on the French root. Open Graph wants a full locale. -->
+<meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://whistling.it/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -45,6 +74,12 @@
 <!--
   Tells Google the brand name and that the site is a game, which is what a
   "whistling it" query is looking for. `alternateName` is the spaced spelling.
+
+  This block describes the *site*, not the page, so it is the one thing here
+  lang-roots.mjs leaves alone: one brand, one url, and `inLanguage` listing both
+  games rather than claiming either page's language. The per-page signals are
+  <html lang>, the hreflang set and the canonical, which is where a crawler
+  looks for them anyway.
 -->
 <script type="application/ld+json">
 {
@@ -54,7 +89,7 @@
   "alternateName": "Whistling It",
   "url": "https://whistling.it/",
   "description": "A daily guessing game where every clip is someone whistling the tune.",
-  "inLanguage": "en",
+  "inLanguage": ["fr", "en"],
   "isFamilyFriendly": true
 }
 </script>

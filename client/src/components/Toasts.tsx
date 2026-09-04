@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useT } from "../i18n/useI18n";
 
 export interface Toast {
   id: number;
@@ -37,15 +38,16 @@ export function useToasts() {
 }
 
 export function Toasts({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: number) => void }) {
+  const t = useT();
   if (toasts.length === 0) return null;
   return (
     /* aria-live so the outcome is announced: the visual notice can easily be
        missed, and it may be the only report that an upload was rejected. */
     <div className="toasts" role="status" aria-live="polite">
-      {toasts.map((t) => (
-        <div key={t.id} className={`toast is-${t.kind}`}>
-          <span>{t.text}</span>
-          <button type="button" aria-label="Dismiss" onClick={() => onDismiss(t.id)}>×</button>
+      {toasts.map((toast) => (
+        <div key={toast.id} className={`toast is-${toast.kind}`}>
+          <span>{toast.text}</span>
+          <button type="button" aria-label={t.toast.dismiss} onClick={() => onDismiss(toast.id)}>×</button>
         </div>
       ))}
     </div>

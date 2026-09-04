@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { DailyClip, TryKind } from "../api";
 import { api } from "../api";
+import { useI18n } from "../i18n/useI18n";
 import { acceptedFor, isRight } from "./match";
 import { makeLadder, unlockedSeconds } from "./levels";
 import { isRecovered, loadRound, loadStreak, recordResult, saveRound } from "./storage";
@@ -54,19 +55,24 @@ export interface Round {
 }
 
 export function useRound(clip: DailyClip): Round {
+  // The side comes from the context rather than a prop: every caller of
+  // `useRound` is already inside the provider, and it is the same value for the
+  // whole mount. What it must never do is default — the storage calls below are
+  // the ones that would silently read the other side's history.
+  const { lang } = useI18n();
   const ladder = useMemo(() => makeLadder(clip.noteStarts.length), [clip.noteStarts.length]);
 
   // For a film or a series this also accepts the credit line, so naming the
   // composer counts as getting it.
   const accepted = useMemo(() => acceptedFor(clip), [clip]);
 
-  const saved = useMemo(() => loadRound(clip.date, clip.id), [clip.date, clip.id]);
+  const saved = useMemo(() => loadRound(clip.date, clip.id, lang), [clip.date, clip.id, lang]);
   const [level, setLevel] = useState(() => Math.min(saved?.level ?? 0, ladder.length - 1));
   const [tape, setTape] = useState<TryKind[]>(() => saved?.tape ?? []);
   const [wrongGuesses, setWrongGuesses] = useState<string[]>(() => saved?.guesses ?? []);
   const [done, setDone] = useState<null | { won: boolean }>(() => saved?.done ?? null);
   const [recovered, setRecovered] = useState(() => !!saved && isRecovered(saved));
-  const [streak, setStreak] = useState(() => loadStreak());
+  const [streak, setStreak] = useState(() => loadStreak(lang));
   const [bumped, setBumped] = useState(false);
   const [justFinished, setJustFinished] = useState(false);
 
@@ -75,9 +81,9 @@ export function useRound(clip: DailyClip): Round {
 
   const persist = useCallback(
     (next: { level: number; tape: TryKind[]; guesses: string[]; done: null | { won: boolean } }) => {
-      saveRound({ date: clip.date, clipId: clip.id, ...next });
+      saveRound({ date: clip.date, clipId: clip.id, ...next }, lang);
     },
-    [clip.date, clip.id],
+    [clip.date, clip.id, lang],
   );
 
   const finish = useCallback(
@@ -87,7 +93,7 @@ export function useRound(clip: DailyClip): Round {
       setJustFinished(true);
       setDone({ won });
       // Past days are playable from the calendar but never move the streak.
-      setStreak(recordResult(won, clip.date));
+      setStreak(recordResult(won, clip.date, lang));
       persist({ level: atLevel, tape: finalTape, guesses: finalGuesses, done: { won } });
       void api
         .submitRound({
@@ -101,7 +107,7 @@ export function useRound(clip: DailyClip): Round {
         })
         .catch((e: unknown) => console.warn("[round] submit failed, kept locally", e));
     },
-    [clip.id, clip.date, clip.noteStarts.length, ladder, persist],
+    [clip.id, clip.date, clip.noteStarts.length, ladder, persist, lang],
   );
 
   /** A miss: buy the next note, or end the round if there are none left. */

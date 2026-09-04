@@ -1,13 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, daysInMonth, firstWeekdayMondayBased, today } from "../api";
 import { ChevronLeftIcon, ChevronRightIcon } from "../components/icons";
+import { useI18n } from "../i18n/useI18n";
 import { loadResults } from "../game/storage";
-
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
 const p2 = (n: number) => String(n).padStart(2, "0");
 
@@ -29,6 +24,9 @@ const p2 = (n: number) => String(n).padStart(2, "0");
  * carry no zone at all.
  */
 export function Calendar({ onOpenDay }: { onOpenDay: (date: string) => void }) {
+  const { lang, t } = useI18n();
+  const MONTHS = t.calendar.months;
+  const WEEKDAYS = t.calendar.weekdays;
   const todayKey = today();
   const [y, m] = todayKey.split("-").map(Number) as [number, number, number];
 
@@ -36,7 +34,8 @@ export function Calendar({ onOpenDay }: { onOpenDay: (date: string) => void }) {
   const [month, setMonth] = useState(m);
 
   // Read once per mount: nothing else writes to localStorage while this is open.
-  const results = useMemo(() => loadResults(), []);
+  // Per side: the French grid must not colour itself from English rounds.
+  const results = useMemo(() => loadResults(lang), [lang]);
 
   /*
    * Which days have a puzzle, one fetch per month and kept afterwards. Paging
@@ -58,7 +57,7 @@ export function Calendar({ onOpenDay }: { onOpenDay: (date: string) => void }) {
   useEffect(() => {
     if (byMonth[monthKey]) return;
     let cancelled = false;
-    api.getPuzzleDays(`${monthKey}-01`, `${monthKey}-${p2(total)}`).then(
+    api.getPuzzleDays(`${monthKey}-01`, `${monthKey}-${p2(total)}`, lang).then(
       (r) => {
         if (cancelled) return;
         setByMonth((prev) => ({ ...prev, [monthKey]: new Set(r.days) }));
@@ -67,7 +66,7 @@ export function Calendar({ onOpenDay }: { onOpenDay: (date: string) => void }) {
       () => { /* offline: the month stays unknown, and the grid stays inert */ },
     );
     return () => { cancelled = true; };
-  }, [monthKey, total, byMonth]);
+  }, [monthKey, total, byMonth, lang]);
 
   const lead = firstWeekdayMondayBased(year, month);
 
@@ -90,14 +89,14 @@ export function Calendar({ onOpenDay }: { onOpenDay: (date: string) => void }) {
           className="cal-nav"
           onClick={() => step(-1)}
           disabled={atFirstMonth}
-          aria-label="Previous month"
+          aria-label={t.calendar.prevMonth}
         ><ChevronLeftIcon /></button>
         <h2 className="cal-title">{MONTHS[month - 1]} {year}</h2>
         <button
           className="cal-nav"
           onClick={() => step(1)}
           disabled={atCurrentMonth}
-          aria-label="Next month"
+          aria-label={t.calendar.nextMonth}
         ><ChevronRightIcon /></button>
       </div>
 
@@ -123,14 +122,13 @@ export function Calendar({ onOpenDay }: { onOpenDay: (date: string) => void }) {
           const hasPuzzle = !!known?.has(key);
 
           const state = result === true ? "won" : result === false ? "lost" : "none";
-          const label = `${day} ${MONTHS[month - 1]} — ${
-            result === true ? "solved"
-            : result === false ? "missed"
-            : isFuture ? "not yet"
-            : !known ? "loading"
-            : !hasPuzzle ? "no whistle that day"
-            : "not played"
-          }`;
+          const label = t.calendar.dayLabel(day, MONTHS[month - 1] ?? "",
+            result === true ? t.calendar.stateSolved
+            : result === false ? t.calendar.stateMissed
+            : isFuture ? t.calendar.stateNotYet
+            : !known ? t.calendar.stateLoading
+            : !hasPuzzle ? t.calendar.stateNoWhistle
+            : t.calendar.stateNotPlayed);
 
           return (
             <button
@@ -154,13 +152,13 @@ export function Calendar({ onOpenDay }: { onOpenDay: (date: string) => void }) {
       </div>
 
       <div className="cal-legend">
-        <span><i className="swatch is-won" />Solved</span>
-        <span><i className="swatch is-lost" />Missed</span>
-        <span><i className="swatch is-none" />Not played</span>
-        <span><i className="swatch is-empty" />No whistle</span>
+        <span><i className="swatch is-won" />{t.calendar.legendSolved}</span>
+        <span><i className="swatch is-lost" />{t.calendar.legendMissed}</span>
+        <span><i className="swatch is-none" />{t.calendar.legendNotPlayed}</span>
+        <span><i className="swatch is-empty" />{t.calendar.legendNoWhistle}</span>
       </div>
 
-      <p className="hint cal-note">Saved on this device only.</p>
+      <p className="hint cal-note">{t.calendar.deviceOnly}</p>
     </div>
   );
 }

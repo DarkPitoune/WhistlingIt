@@ -1,4 +1,5 @@
 import type { DailyClip } from "../api";
+import type { Strings } from "../i18n/strings";
 
 /**
  * How the crowd did on this tune, as one short phrase.
@@ -15,16 +16,15 @@ import type { DailyClip } from "../api";
  * first, the reveal drops the line. Deciding that here would put the daily's copy
  * in front of someone who has already played.
  */
-export function solveRate(clip: DailyClip): string | null {
+export function solveRate(clip: DailyClip, t: Strings): string | null {
   const plays = clip.solvedCount + clip.failedCount;
   if (plays <= 0) return null;
 
-  // Agreement is with the denominator, which is what the noun belongs to:
-  // "1 of 1 player has", "1 of 2 players have", "0 of 1 player has".
-  if (plays < 10) {
-    return `${clip.solvedCount} of ${plays} ${plays === 1 ? "player has" : "players have"} found it`;
-  }
-  return `${Math.round((clip.solvedCount / plays) * 100)}% of players found it`;
+  // The sentence itself is the dictionary's, because the agreement rules differ:
+  // English agrees with the denominator ("1 of 2 players have"), French with the
+  // numerator ("1 joueur sur 2 l'a trouvé"). Only the threshold is shared.
+  if (plays < 10) return t.stats.solveRateFew(clip.solvedCount, plays);
+  return t.stats.solveRateMany(Math.round((clip.solvedCount / plays) * 100));
 }
 
 /**
@@ -33,6 +33,6 @@ export function solveRate(clip: DailyClip): string | null {
  * The fallback is deliberately a name rather than "unknown": someone recorded
  * this, and an unsigned contribution is still a contribution.
  */
-export function whistlerCredit(clip: { signature: string | null }): string {
-  return `by ${clip.signature?.trim() || "Anonymous Whistler"}`;
+export function whistlerCredit(clip: { signature: string | null }, t: Strings): string {
+  return t.stats.whistlerCredit(clip.signature?.trim() || t.stats.anonymousWhistler);
 }

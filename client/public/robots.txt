@@ -9,9 +9,11 @@
 User-agent: *
 Allow: /
 
-# The game routes (/booth, /calendar, /2026-09-02, …) are client-side only. On
-# GitHub Pages an unknown path is served as 404.html, so they answer with a 404
-# status even though the app renders fine. They are deliberately left out of the
-# sitemap for that reason; do not add them until the hosting can return 200.
+# The two language roots, /fr and /en, are real files the deploy workflow writes,
+# so they answer 200 and are the only two URLs in the sitemap. Everything below
+# them (/fr/booth, /en/calendar, /fr/2026-09-02, …) is client-side routing that
+# GitHub Pages serves as 404.html — the app renders fine but the status is 404,
+# so they stay out of the sitemap; do not add them until the hosting can return
+# 200 there too.
 
 Sitemap: https://whistling.it/sitemap.xml

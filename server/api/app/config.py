@@ -16,6 +16,17 @@ BUCKET = "songs"
 # code change, not a migration. Mirrors the chips in the booth design.
 CATEGORIES = ("Film", "TV Series", "Video Games", "Jingle", "Music")
 
+# Which of the two games a song belongs to, decided by the booth it was recorded
+# in. Unlike CATEGORIES this *is* also a check constraint, because it partitions
+# the pool: a typo here would not mislabel a song, it would hide it from both
+# sides. Kept as a tuple in the same shape so the two read alike.
+LANGS = ("fr", "en")
+
+# What an upload with no language field means. The booth has sent one since the
+# two-language deploy; this covers a client that has not reloaded yet, and French
+# is where every song and player predating the split already is.
+DEFAULT_LANG = "fr"
+
 
 def _required(name: str) -> str:
     value = os.environ.get(name, "").strip()

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useT } from "../i18n/useI18n";
 import { MoonIcon, SunIcon } from "./icons";
 
 /**
@@ -37,6 +38,7 @@ function apply(choice: Choice | null): void {
 }
 
 export function ThemeToggle() {
+  const t = useT();
   const [choice, setChoice] = useState<Choice | null>(stored);
   // What is actually on screen, which is what the button has to label itself by.
   const [system, setSystem] = useState<Choice>(systemPrefers);
@@ -67,8 +69,8 @@ export function ThemeToggle() {
       onClick={flip}
       // The label names the destination, not the state — a switch that says
       // "Dark" is ambiguous about which way it is pointing.
-      aria-label={active === "dark" ? "Switch to the light theme" : "Switch to the dark theme"}
-      title={active === "dark" ? "Light theme" : "Dark theme"}
+      aria-label={active === "dark" ? t.theme.toLight : t.theme.toDark}
+      title={active === "dark" ? t.theme.lightTheme : t.theme.darkTheme}
     >
       {/* The icon shows where you are going, matching the label. */}
       {active === "dark" ? <SunIcon /> : <MoonIcon />}

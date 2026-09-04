@@ -14,11 +14,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -49,6 +44,7 @@ export type Database = {
       daily: {
         Row: {
           failed_count: number
+          lang: string
           puzzle_date: string
           solve_level_sum: number
           solved_count: number
@@ -56,6 +52,7 @@ export type Database = {
         }
         Insert: {
           failed_count?: number
+          lang?: string
           puzzle_date: string
           solve_level_sum?: number
           solved_count?: number
@@ -63,6 +60,7 @@ export type Database = {
         }
         Update: {
           failed_count?: number
+          lang?: string
           puzzle_date?: string
           solve_level_sum?: number
           solved_count?: number
@@ -89,12 +87,14 @@ export type Database = {
           from_label: string | null
           hidden: boolean
           id: string
+          lang: string
           metrics: Json
           n_notes: number
           notes: Json
           params_fingerprint: string
           pipeline_version: string
           reveal: Json
+          signature: string | null
           times_used: number
           title: string
         }
@@ -108,12 +108,14 @@ export type Database = {
           from_label?: string | null
           hidden?: boolean
           id?: string
+          lang?: string
           metrics: Json
           n_notes: number
           notes: Json
           params_fingerprint: string
           pipeline_version: string
           reveal: Json
+          signature?: string | null
           times_used?: number
           title: string
         }
@@ -127,12 +129,14 @@ export type Database = {
           from_label?: string | null
           hidden?: boolean
           id?: string
+          lang?: string
           metrics?: Json
           n_notes?: number
           notes?: Json
           params_fingerprint?: string
           pipeline_version?: string
           reveal?: Json
+          signature?: string | null
           times_used?: number
           title?: string
         }
@@ -143,9 +147,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      calendar_days: { Args: { d_from: string; d_to: string }; Returns: Json }
-      get_daily: { Args: never; Returns: Json }
-      get_daily_on: { Args: { d: string }; Returns: Json }
+      calendar_days: {
+        Args: { d_from: string; d_to: string; l?: string }
+        Returns: Json
+      }
+      get_daily: { Args: { l?: string }; Returns: Json }
+      get_daily_on: { Args: { d: string; l?: string }; Returns: Json }
+      known_lang: { Args: { l: string }; Returns: string }
       level_count: { Args: { n_notes: number }; Returns: number }
       puzzle_payload: { Args: { d: string; sid: string }; Returns: Json }
       record_round: {
@@ -292,3 +300,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
